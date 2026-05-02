@@ -17,6 +17,7 @@ import MentorView from "./components/MentorView";
 import Navigation, { type ActiveView } from "./components/Navigation";
 import ReportView from "./components/ReportView";
 import SettingsView from "./components/SettingsView";
+import NewGameSetupModal from "./components/setup/NewGameSetupModal";
 import StatusBadge from "./components/StatusBadge";
 import StaticPageView from "./components/StaticPageView";
 import type { StaticPage } from "./components/StaticPageView";
@@ -30,6 +31,7 @@ import {
   createInitialState,
   normalizeFounder,
   normalizeIndustry,
+  normalizeScenario,
   type ActionType,
   type FounderType,
   type GameState,
@@ -73,7 +75,7 @@ const hydrateGameState = (state: Partial<GameState>): GameState => ({
       normalizeFounder(state.selectedFounderType ?? state.founder),
     ),
   trait: state.trait ?? "Calm Operator",
-  scenario: state.scenario ?? "Bootstrapped",
+  scenario: normalizeScenario(state.scenario),
   ending: state.ending ?? null,
   growthPressure: state.growthPressure ?? 1,
   month: state.month ?? 1,
@@ -168,7 +170,7 @@ export default function App() {
     "Product Founder",
   );
   const [selectedScenario, setSelectedScenario] = useState<ScenarioType>(
-    state.scenario,
+    normalizeScenario(state.scenario),
   );
   const [saveSlots, setSaveSlots] = useState(loadSaveSlots);
   const [showTutorial, setShowTutorial] = useState(
@@ -239,7 +241,7 @@ export default function App() {
       setState(saved);
       setSelectedIndustry(saved.industry);
       setSelectedFounder(saved.founder);
-      setSelectedScenario(saved.scenario);
+      setSelectedScenario(normalizeScenario(saved.scenario));
       setNoticeKey("app.gameLoaded");
       setNoticeParams(undefined);
       setActiveView("home");
@@ -258,17 +260,25 @@ export default function App() {
     setActiveView("home");
   };
 
-  const handleStartConfiguredGame = () => {
-    const industry = selectedIndustry;
-    const founder = selectedFounder;
+  const handleStartConfiguredGame = (setup?: {
+    scenario: ScenarioType;
+    industry: IndustryType;
+    founder: FounderType;
+  }) => {
+    const industry = setup?.industry ?? selectedIndustry;
+    const founder = setup?.founder ?? selectedFounder;
+    const scenario = setup?.scenario ?? selectedScenario;
     const fresh = createInitialState(
       state.meta,
       industry,
       founder,
-      selectedScenario,
+      scenario,
     );
-    trackGameStart({ runId: fresh.runId, industry, founder, scenario: selectedScenario });
+    trackGameStart({ runId: fresh.runId, industry, founder, scenario });
     setState(fresh);
+    setSelectedIndustry(industry);
+    setSelectedFounder(founder);
+    setSelectedScenario(scenario);
     saveGame(fresh);
     setNoticeKey("app.newRun");
     setNoticeParams({
@@ -298,7 +308,7 @@ export default function App() {
     setState(saved);
     setSelectedIndustry(saved.industry);
     setSelectedFounder(saved.founder);
-    setSelectedScenario(saved.scenario);
+      setSelectedScenario(normalizeScenario(saved.scenario));
     setNoticeKey("app.slotLoaded");
     setNoticeParams({ slot: slot + 1 });
     setActiveView("home");
@@ -342,31 +352,6 @@ export default function App() {
       return <StaticPageView page={activeView as StaticPage} />;
     }
 
-    if (showSetup) {
-      return (
-        <SettingsView
-          state={state}
-          savedGameAvailable={savedGameAvailable}
-          saveSlots={saveSlots}
-          selectedScenario={selectedScenario}
-          selectedIndustry={selectedIndustry}
-          selectedFounder={selectedFounder}
-          setupMode
-          onSave={handleSave}
-          onLoad={handleLoad}
-          onNewGame={handleStartConfiguredGame}
-          onShowTutorial={handleShowTutorial}
-          onOpenHelp={() => setActiveView("help")}
-          onNavigate={setActiveView}
-          onSaveSlot={handleSaveSlot}
-          onLoadSlot={handleLoadSlot}
-          onScenarioChange={setSelectedScenario}
-          onIndustryChange={setSelectedIndustry}
-          onFounderChange={setSelectedFounder}
-        />
-      );
-    }
-
     switch (activeView) {
       case "actions":
         return (
@@ -397,10 +382,6 @@ export default function App() {
             state={state}
             savedGameAvailable={savedGameAvailable}
             saveSlots={saveSlots}
-            selectedScenario={selectedScenario}
-            selectedIndustry={selectedIndustry}
-            selectedFounder={selectedFounder}
-            setupMode={false}
             onSave={handleSave}
             onLoad={handleLoad}
             onNewGame={handleNewGame}
@@ -409,9 +390,6 @@ export default function App() {
             onNavigate={setActiveView}
             onSaveSlot={handleSaveSlot}
             onLoadSlot={handleLoadSlot}
-            onScenarioChange={setSelectedScenario}
-            onIndustryChange={setSelectedIndustry}
-            onFounderChange={setSelectedFounder}
           />
         );
       case "home":
@@ -471,6 +449,17 @@ export default function App() {
         <TutorialOverlay
           onClose={handleCloseTutorial}
           onOpenHelp={handleOpenHelpFromTutorial}
+        />
+      )}
+      {showSetup && (
+        <NewGameSetupModal
+          meta={state.meta}
+          initialScenario={selectedScenario}
+          initialIndustry={selectedIndustry}
+          initialFounder={selectedFounder}
+          canCancel={savedGameAvailable}
+          onCancel={() => setShowSetup(false)}
+          onStart={handleStartConfiguredGame}
         />
       )}
       <BannerAd />

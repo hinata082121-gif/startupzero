@@ -1,13 +1,4 @@
-import type { ReactNode } from "react";
-import {
-  type FounderType,
-  type GameState,
-  type IndustryType,
-  type MetaProgression,
-  type ScenarioType,
-  founderConfig,
-  industryConfig,
-} from "../gameState";
+import type { GameState } from "../gameState";
 import { useI18n } from "../i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
 import type { ActiveView } from "./Navigation";
@@ -16,10 +7,6 @@ type SettingsViewProps = {
   state: GameState;
   savedGameAvailable: boolean;
   saveSlots: Array<GameState | null>;
-  selectedScenario: ScenarioType;
-  selectedIndustry: IndustryType;
-  selectedFounder: FounderType;
-  setupMode?: boolean;
   onSave: () => void;
   onLoad: () => void;
   onNewGame: () => void;
@@ -28,29 +15,12 @@ type SettingsViewProps = {
   onNavigate: (view: ActiveView) => void;
   onSaveSlot: (slot: number) => void;
   onLoadSlot: (slot: number) => void;
-  onScenarioChange: (scenario: ScenarioType) => void;
-  onIndustryChange: (industry: IndustryType) => void;
-  onFounderChange: (founder: FounderType) => void;
 };
-
-const allScenarios: ScenarioType[] = ["Bootstrapped", "VC Funded", "Crisis Mode"];
-const allIndustries: IndustryType[] = ["Local Business Tech", "SaaS", "Game", "AI", "Marketplace"];
-const allFounders: FounderType[] = [
-  "Product Founder",
-  "Engineer Founder",
-  "Sales Founder",
-  "Growth Founder",
-  "Bootstrap Founder",
-];
 
 export default function SettingsView({
   state,
   savedGameAvailable,
   saveSlots,
-  selectedScenario,
-  selectedIndustry,
-  selectedFounder,
-  setupMode = false,
   onSave,
   onLoad,
   onNewGame,
@@ -59,24 +29,12 @@ export default function SettingsView({
   onNavigate,
   onSaveSlot,
   onLoadSlot,
-  onScenarioChange,
-  onIndustryChange,
-  onFounderChange,
 }: SettingsViewProps) {
   const { t } = useI18n();
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-4">
-        {setupMode && (
-          <section className="rounded-xl border border-teal-200 bg-teal-50 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
-              {t("setup.title")}
-            </p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950">{t("setup.subtitle")}</h2>
-            <p className="mt-2 text-sm leading-6 text-teal-950">{t("setup.body")}</p>
-          </section>
-        )}
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
@@ -103,7 +61,7 @@ export default function SettingsView({
               {t("common.load")}
             </button>
             <button type="button" onClick={onNewGame} className="min-h-11 rounded-md bg-teal-600 px-4 py-2 text-sm font-bold text-white">
-              {setupMode ? t("setup.startGame") : t("common.newGame")}
+              {t("common.newGame")}
             </button>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -141,203 +99,11 @@ export default function SettingsView({
           </div>
         </section>
 
-        <SetupPanel
-          meta={state.meta}
-          selectedScenario={selectedScenario}
-          selectedIndustry={selectedIndustry}
-          selectedFounder={selectedFounder}
-          onScenarioChange={onScenarioChange}
-          onIndustryChange={onIndustryChange}
-          onFounderChange={onFounderChange}
-          setupMode={setupMode}
-        />
-
         <SaveSlotsPanel slots={saveSlots} onSave={onSaveSlot} onLoad={onLoadSlot} />
       </div>
 
       <MetaPanel state={state} />
     </div>
-  );
-}
-
-type SetupPanelProps = {
-  meta: MetaProgression;
-  selectedScenario: ScenarioType;
-  selectedIndustry: IndustryType;
-  selectedFounder: FounderType;
-  onScenarioChange: (scenario: ScenarioType) => void;
-  onIndustryChange: (industry: IndustryType) => void;
-  onFounderChange: (founder: FounderType) => void;
-  setupMode?: boolean;
-};
-
-function SetupPanel({
-  meta,
-  selectedScenario,
-  selectedIndustry,
-  selectedFounder,
-  onScenarioChange,
-  onIndustryChange,
-  onFounderChange,
-  setupMode = false,
-}: SetupPanelProps) {
-  const { t } = useI18n();
-
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {t("dashboard.replaySetup")}
-        </p>
-        <h2 className="text-xl font-bold text-slate-950">
-          {setupMode ? t("setup.configureRun") : t("dashboard.nextRunLoadout")}
-        </h2>
-      </div>
-      <div className="grid gap-4">
-        <ChoiceGroup title={t("dashboard.scenario")}>
-          {allScenarios.map((scenario) => (
-            <ChoiceButton
-              key={scenario}
-              selected={selectedScenario === scenario}
-              onClick={() => onScenarioChange(scenario)}
-              title={t(`entities.scenarios.${scenario}.title`)}
-              description={t(`entities.scenarios.${scenario}.description`)}
-            />
-          ))}
-        </ChoiceGroup>
-
-        <ChoiceGroup title={t("dashboard.industry")}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {allIndustries.map((industry) => {
-              const unlocked = meta.unlockedIndustries.includes(industry);
-              const config = industryConfig[industry];
-            return (
-              <ChoiceButton
-                key={industry}
-                selected={selectedIndustry === industry}
-                disabled={!unlocked}
-                onClick={() => onIndustryChange(industry)}
-                title={`${t(`entities.industries.${industry}.title`)} ${unlocked ? "" : t("common.locked")}`}
-                description={t(`entities.industries.${industry}.description`)}
-                difficulty={t(`setup.difficulty.${config.difficulty}`)}
-                recommendation={t(config.recommendationKey)}
-                strengths={config.strengths.map((key) => t(key))}
-                weaknesses={config.weaknesses.map((key) => t(key))}
-                bonuses={config.initialBonus.map((key) => t(key))}
-              />
-            );
-            })}
-          </div>
-        </ChoiceGroup>
-
-        <ChoiceGroup title={t("dashboard.founder")}>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {allFounders.map((founder) => {
-              const unlocked = meta.unlockedFounders.includes(founder);
-              const config = founderConfig[founder];
-            return (
-              <ChoiceButton
-                key={founder}
-                selected={selectedFounder === founder}
-                disabled={!unlocked}
-                onClick={() => onFounderChange(founder)}
-                title={`${t(`entities.founders.${founder}.title`)} ${unlocked ? "" : t("common.locked")}`}
-                description={t(`entities.founders.${founder}.description`)}
-                difficulty={t(`setup.difficulty.${config.difficulty}`)}
-                recommendation={t(config.recommendationKey)}
-                strengths={config.strengths.map((key) => t(key))}
-                weaknesses={config.weaknesses.map((key) => t(key))}
-                bonuses={config.initialBonus.map((key) => t(key))}
-              />
-            );
-            })}
-          </div>
-        </ChoiceGroup>
-      </div>
-    </section>
-  );
-}
-
-function ChoiceGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <p className="mb-2 text-sm font-bold text-slate-700">{title}</p>
-      <div className="grid gap-2">{children}</div>
-    </div>
-  );
-}
-
-function ChoiceButton({
-  title,
-  description,
-  selected,
-  disabled,
-  onClick,
-  difficulty,
-  recommendation,
-  strengths = [],
-  weaknesses = [],
-  bonuses = [],
-}: {
-  title: string;
-  description: string;
-  selected: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  difficulty?: string;
-  recommendation?: string;
-  strengths?: string[];
-  weaknesses?: string[];
-  bonuses?: string[];
-}) {
-  const { t } = useI18n();
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`min-h-20 rounded-md border p-3 text-left text-sm transition ${
-        selected ? "border-teal-600 bg-teal-50" : "border-slate-200 bg-slate-50"
-      } disabled:cursor-not-allowed disabled:opacity-45`}
-    >
-      <span className="flex flex-wrap items-center gap-2 font-bold text-slate-950">
-        {title}
-        {recommendation && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
-            {recommendation}
-          </span>
-        )}
-        {difficulty && (
-          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-600">
-            {difficulty}
-          </span>
-        )}
-      </span>
-      <span className="mt-1 line-clamp-2 block leading-5 text-slate-600">{description}</span>
-      {(strengths.length > 0 || weaknesses.length > 0 || bonuses.length > 0) && (
-        <span className="mt-3 grid gap-2 text-xs leading-5 text-slate-600">
-          {strengths.length > 0 && (
-            <span>
-              <span className="font-bold text-emerald-700">{t("setup.strengths")}: </span>
-              {strengths.join(" / ")}
-            </span>
-          )}
-          {weaknesses.length > 0 && (
-            <span>
-              <span className="font-bold text-red-700">{t("setup.weaknesses")}: </span>
-              {weaknesses.join(" / ")}
-            </span>
-          )}
-          {bonuses.length > 0 && (
-            <span>
-              <span className="font-bold text-sky-700">{t("setup.initialBonus")}: </span>
-              {bonuses.join(" / ")}
-            </span>
-          )}
-        </span>
-      )}
-    </button>
   );
 }
 

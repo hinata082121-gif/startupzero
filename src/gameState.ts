@@ -17,7 +17,7 @@ export type IndustryType =
   | "Marketplace"
   | "Local Business Tech";
 
-export type ScenarioType = "Bootstrapped" | "VC Funded" | "Crisis Mode";
+export type ScenarioType = "Standard Startup" | "Bootstrapped" | "VC Funded" | "Crisis Mode";
 
 export type FounderType =
   | "Engineer Founder"
@@ -326,6 +326,8 @@ export const scenarioConfig: Record<
   ScenarioType,
   {
     description: string;
+    difficulty: "Easy" | "Normal" | "Hard" | "Expert";
+    recommendationKey: string;
     cashMultiplier: number;
     burnMultiplier: number;
     moraleDelta: number;
@@ -333,8 +335,20 @@ export const scenarioConfig: Record<
     eventRisk: number;
   }
 > = {
+  "Standard Startup": {
+    description: "entities.scenarios.Standard Startup.description",
+    difficulty: "Normal",
+    recommendationKey: "setup.recommendations.standard",
+    cashMultiplier: 1,
+    burnMultiplier: 1,
+    moraleDelta: 0,
+    growthPressure: 1,
+    eventRisk: 1,
+  },
   Bootstrapped: {
     description: "entities.scenarios.Bootstrapped.description",
+    difficulty: "Hard",
+    recommendationKey: "setup.recommendations.advanced",
     cashMultiplier: 0.35,
     burnMultiplier: 0.75,
     moraleDelta: 8,
@@ -343,6 +357,8 @@ export const scenarioConfig: Record<
   },
   "VC Funded": {
     description: "entities.scenarios.VC Funded.description",
+    difficulty: "Normal",
+    recommendationKey: "setup.recommendations.standard",
     cashMultiplier: 2.4,
     burnMultiplier: 1.35,
     moraleDelta: -4,
@@ -351,6 +367,8 @@ export const scenarioConfig: Record<
   },
   "Crisis Mode": {
     description: "entities.scenarios.Crisis Mode.description",
+    difficulty: "Expert",
+    recommendationKey: "setup.recommendations.expert",
     cashMultiplier: 0.8,
     burnMultiplier: 1.05,
     moraleDelta: -12,
@@ -555,6 +573,19 @@ export const normalizeFounder = (founder?: string): FounderType => {
   return "Product Founder";
 };
 
+export const normalizeScenario = (scenario?: string): ScenarioType => {
+  if (scenario === "standard" || scenario === "Standard" || scenario === "Standard Startup") {
+    return "Standard Startup";
+  }
+  if (scenario === "VC Backed") {
+    return "VC Funded";
+  }
+  if (scenario === "Standard Startup" || scenario === "Bootstrapped" || scenario === "VC Funded" || scenario === "Crisis Mode") {
+    return scenario;
+  }
+  return "Standard Startup";
+};
+
 export const getRandomTrait = (): TraitType => {
   const traits: TraitType[] = ["Hustler", "Engineer", "Storyteller", "Calm Operator"];
   return traits[Math.floor(Math.random() * traits.length)];
@@ -564,10 +595,11 @@ export const createInitialState = (
   meta: MetaProgression = DEFAULT_META,
   industry: IndustryType = "SaaS",
   founder: FounderType = "Product Founder",
-  scenario: ScenarioType = "Bootstrapped",
+  scenario: ScenarioType = "Standard Startup",
 ): GameState => {
   industry = normalizeIndustry(industry);
   founder = normalizeFounder(founder);
+  scenario = normalizeScenario(scenario);
   const industrySettings = industryConfig[industry];
   const scenarioSettings = scenarioConfig[scenario];
   const modifiers = combineModifiers(industry, founder);
