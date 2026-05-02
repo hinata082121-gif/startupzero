@@ -1,5 +1,6 @@
 import type { ActionType, GameState } from "../gameState";
 import ActionPanel from "./ActionPanel";
+import AdBanner from "./AdBanner";
 import { RewardAd } from "./AdPanels";
 
 type ActionsViewProps = {
@@ -10,11 +11,14 @@ type ActionsViewProps = {
 
 export default function ActionsView({ state, onAction, onRewardAd }: ActionsViewProps) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <ActionPanel status={state.status} onAction={onAction} />
-      <div className="space-y-4">
-        <RewardAd status={state.status} watched={state.rewardAdWatched} onWatch={onRewardAd} />
+    <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <ActionPanel status={state.status} onAction={onAction} />
+        <div className="space-y-4">
+          <RewardAd status={state.status} watched={state.rewardAdWatched} onWatch={onRewardAd} />
+        </div>
       </div>
+      {state.status === "lost" && <AdBanner />}
     </div>
   );
 }

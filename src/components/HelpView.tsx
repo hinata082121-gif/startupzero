@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n";
+import AdBanner from "./AdBanner";
 
 const flowSteps = ["one", "two", "three", "four", "five"];
 
@@ -103,6 +104,8 @@ export default function HelpView() {
           ))}
         </div>
       </HelpCard>
+
+      <AdBanner />
     </div>
   );
 }

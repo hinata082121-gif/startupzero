@@ -4,13 +4,12 @@ import MentorPanel from "./MentorPanel";
 
 type MentorViewProps = {
   state: GameState;
-  isPremiumUser: boolean;
 };
 
-export default function MentorView({ state, isPremiumUser }: MentorViewProps) {
+export default function MentorView({ state }: MentorViewProps) {
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <MentorPanel state={state} isPremiumUser={isPremiumUser} />
+      <MentorPanel state={state} />
       <SidebarAd />
     </div>
   );

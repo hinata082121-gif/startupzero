@@ -7,15 +7,11 @@ import { useI18n } from "../i18n";
 
 type AIMentorPanelProps = {
   state: GameState;
-  isPremiumUser: boolean;
 };
 
-export default function AIMentorPanel({ state, isPremiumUser }: AIMentorPanelProps) {
+export default function AIMentorPanel({ state }: AIMentorPanelProps) {
   const { t, currentLanguage } = useI18n();
   const advice = useMemo(() => generateMentorAdvice(state), [state, currentLanguage]);
-  const visibleActions = isPremiumUser
-    ? advice.recommendedActions
-    : advice.recommendedActions.slice(0, 2);
 
   return (
     <section className="space-y-4">
@@ -26,14 +22,14 @@ export default function AIMentorPanel({ state, isPremiumUser }: AIMentorPanelPro
               {t("mentor.title")}
             </p>
             <h2 className="mt-1 text-2xl font-bold text-slate-950">
-              {isPremiumUser ? t("mentor.premiumTitle") : t("mentor.basicTitle")}
+              {t("mentor.analysisTitle")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {isPremiumUser ? t("mentor.premiumDepth") : t("mentor.freeLimit")}
+              {t("mentor.adSupportedDepth")}
             </p>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-            {isPremiumUser ? t("common.premium") : t("common.free")}
+            {t("mentor.adSupportedLabel")}
           </span>
         </div>
       </div>
@@ -50,7 +46,7 @@ export default function AIMentorPanel({ state, isPremiumUser }: AIMentorPanelPro
 
       <MentorCard title={t("mentor.recommendedActions")} tone="green">
         <div className="space-y-2">
-          {visibleActions.map((item, index) => (
+          {advice.recommendedActions.map((item, index) => (
             <RecommendationRow key={`${item.action}-${item.reasonKey}`} item={item} index={index} />
           ))}
         </div>

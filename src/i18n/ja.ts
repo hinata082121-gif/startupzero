@@ -8,7 +8,6 @@ export const ja: TranslationTree = {
     save: "保存",
     load: "読込",
     newGame: "新規開始",
-    premium: "プレミアム",
     free: "無料",
     locked: "未解放",
     empty: "空き",
@@ -46,8 +45,6 @@ export const ja: TranslationTree = {
     slotSaved: "スロット{{slot}}に保存しました。",
     slotEmpty: "スロット{{slot}}は空です。",
     slotLoaded: "スロット{{slot}}を読み込みました。",
-    premiumOn: "詳細分析を有効にしました。",
-    premiumOff: "詳細分析を無効にしました。",
     bannerPlaying: "月間売上50,000ドルを達成するまで生き残りましょう。",
     bannerWon: "成功達成：売上目標に到達しました。",
     bannerLost: "事業終了。新しい会社でもう一度挑戦しましょう。",
@@ -61,6 +58,10 @@ export const ja: TranslationTree = {
     mentor: "メンター",
     log: "ログ",
     help: "ヘルプ",
+    privacy: "プライバシーポリシー",
+    terms: "利用規約",
+    about: "このサイトについて",
+    contact: "お問い合わせ",
     settings: "設定",
   },
   home: {
@@ -85,7 +86,8 @@ export const ja: TranslationTree = {
   },
   settings: {
     preferences: "設定",
-    premiumToggle: "詳細助言",
+    adSupported: "広告収益モデルです。追加の助言は広告で支えられています。",
+    siteLinks: "サイト情報",
     showTutorial: "チュートリアルをもう一度見る",
     openHelp: "ヘルプを開く",
   },
@@ -228,7 +230,7 @@ export const ja: TranslationTree = {
     streamerCoverage: { title: "配信者に取り上げられる", description: "人気配信者がゲームをプレイし、ユーザーが一気に増えました。" },
     reviewBomb: { title: "レビューが荒れる", description: "不満がレビューに広がり、士気と評判が下がりました。" },
     gameUpdatePraise: { title: "アップデートが好評", description: "最新アップデートがプレイヤーに評価され、ユーザー・売上・士気が上がりました。" },
-    monetizationBacklash: { title: "課金バランスに批判", description: "収益化設計に批判が集まり、売上と評判が下がりました。" },
+    monetizationBacklash: { title: "収益化バランスに批判", description: "収益化設計に批判が集まり、売上と評判が下がりました。" },
     newAiModel: { title: "新しいAIモデルが話題に", description: "新モデルにより開発可能性が広がりましたが、インフラ費も増えました。" },
     apiCostSpike: { title: "APIコストが増加", description: "利用量に伴うAPI費用が想定以上に増え、月間支出が大きく上がりました。" },
     accuracyBreakthrough: { title: "精度改善が評価", description: "モデル精度が改善し、顧客がプロダクトの価値を感じ始めました。" },
@@ -295,8 +297,8 @@ export const ja: TranslationTree = {
   },
   mentor: {
     title: "AIメンター",
-    premiumTitle: "詳細分析",
     basicTitle: "基本ヒント",
+    analysisTitle: "広告サポート分析",
     freePrompt: "1ターンに1回、無料ヒントを確認できます。",
     getHint: "ヒントを見る",
     used: "今月のヒントは使用済み",
@@ -326,7 +328,8 @@ export const ja: TranslationTree = {
     reasoning: "判断理由",
     beginnerNote: "初心者向け補足",
     freeLimit: "無料メンターでは、重要な分析を絞って表示します。",
-    premiumDepth: "プレミアムでは、おすすめ行動を広げて経営状態をより詳しく読み解きます。",
+    adSupportedDepth: "詳細なメンター助言は、サブスクではなく広告収益で提供します。",
+    adSupportedLabel: "広告サポート",
     riskNoneDetailed: "現時点で致命的なリスクはありません。残り運転期間、士気、市場適合度は引き続き見ておきましょう。",
     reasoningRiskFirst: "この助言は、生存リスクを最優先しています。資金や士気が崩れると、成長機会を活かせません。",
     reasoningGrowthBalance: "今すぐ致命的な危機ではないため、成長と安定のバランスを重視しています。",
@@ -433,6 +436,7 @@ export const ja: TranslationTree = {
     },
   },
   ads: {
+    advertisement: "広告",
     bannerLabel: "バナー広告",
     bannerText: "ダミー広告枠：創業者向けツール、クラウドクレジット、ローンチ支援。",
     sidebarLabel: "サイドバー広告",
@@ -526,6 +530,116 @@ export const ja: TranslationTree = {
     founders: {
       title: "創業者タイプについて",
       body: "創業者タイプごとに得意な行動が異なります。自分のプレイスタイルに合うものを選びつつ、強みだけでなく弱みも意識しましょう。",
+    },
+  },
+  site: {
+    privacy: {
+      eyebrow: "ポリシー",
+      title: "プライバシーポリシー",
+      intro: "Startup Zeroにおけるプライバシー、Cookie、広告、分析の扱いについて説明します。",
+      sections: {
+        overview: {
+          title: "取り扱う情報",
+          body: "Startup Zeroはブラウザゲームです。ゲーム進行や言語設定は、リロード後も続けられるようにブラウザのlocalStorageへ保存されることがあります。",
+        },
+        adsense: {
+          title: "Google AdSenseについて",
+          body: "Startup Zeroでは広告表示のためにGoogle AdSenseを利用する場合があります。Googleおよびそのパートナーは、広告の配信や測定のためにCookieを使用することがあります。",
+        },
+        cookies: {
+          title: "Cookieの使用",
+          body: "Cookieおよび類似技術は、広告配信、基本的なサイト機能、不正防止、表示回数の調整、測定などの目的で使用される場合があります。",
+        },
+        thirdParty: {
+          title: "第三者配信事業者",
+          body: "Googleを含む第三者配信事業者は、このサイトや他のサイトへの過去の訪問情報に基づいて広告を配信するため、Cookieを使用することがあります。",
+        },
+        adCookies: {
+          title: "広告Cookie",
+          body: "Googleの広告Cookieにより、このサイトまたは他のサイトへの過去の訪問情報に基づく広告が表示される可能性があります。",
+        },
+        optOut: {
+          title: "パーソナライズ広告の無効化",
+          body: "ユーザーはGoogleの広告設定からパーソナライズ広告を無効化できます。利用可能な場合は、ブラウザのCookie設定や業界団体のオプトアウト機能も利用できます。",
+        },
+        analytics: {
+          title: "Analyticsについて",
+          body: "Startup Zeroにはゲームバランス改善のための内部分析があり、将来的にアクセス状況を把握する分析サービスを利用する場合があります。分析データは可能な範囲で集計して利用します。",
+        },
+        contact: {
+          title: "プライバシーに関する連絡先",
+          body: "プライバシー、広告、ポリシーに関するお問い合わせは contact@startupzero.app までご連絡ください。",
+        },
+      },
+    },
+    terms: {
+      eyebrow: "規約",
+      title: "利用規約",
+      intro: "Startup Zeroを利用する際の基本的なルールを説明します。",
+      sections: {
+        use: {
+          title: "サイトの利用",
+          body: "Startup Zeroはブラウザ上で遊べるシミュレーションゲームです。法令に従い、サービスの妨害を目的とした利用は行わないでください。",
+        },
+        game: {
+          title: "ゲーム内容",
+          body: "本ゲームは簡略化されたシミュレーションであり、法律・金融・投資・経営上の助言ではありません。",
+        },
+        ads: {
+          title: "広告について",
+          body: "本サイトには広告が表示される場合があります。広告枠はラベル表示され、ゲーム操作ボタンと混同しない位置に配置します。",
+        },
+        disclaimer: {
+          title: "免責事項",
+          body: "本サービスは現状有姿で提供されます。正確性や継続提供に努めますが、誤りや中断が発生する場合があります。",
+        },
+        changes: {
+          title: "変更について",
+          body: "機能追加や運営方針の変更に応じて、ゲーム内容、ポリシー、規約を更新する場合があります。",
+        },
+      },
+    },
+    about: {
+      eyebrow: "概要",
+      title: "Startup Zeroについて",
+      intro: "Startup Zeroは、起業と経営をテーマにした軽量なシミュレーションゲームです。",
+      sections: {
+        overview: {
+          title: "どんなゲームか",
+          body: "プレイヤーは創業者として、開発、採用、マーケティング、資金調達、ピボット、休息などを毎月選びます。",
+        },
+        simulation: {
+          title: "起業シミュレーション",
+          body: "資金、売上、ユーザー数、開発進捗、チーム士気、市場適合度など、スタートアップで起きやすいトレードオフを体験できます。",
+        },
+        beginner: {
+          title: "初心者でも遊べる設計",
+          body: "ヘルプ、メンター助言、レポート、分析画面を用意しているため、起業に詳しくない方でも流れを理解しながら遊べます。",
+        },
+        education: {
+          title: "教育的・体験的な目的",
+          body: "Startup Zeroは、短いランを繰り返しながら経営判断の難しさを体験するためのゲームです。",
+        },
+      },
+    },
+    contact: {
+      eyebrow: "連絡先",
+      title: "お問い合わせ",
+      intro: "プロダクト、バグ、広告、ポリシー関連のお問い合わせ先です。",
+      sections: {
+        email: {
+          title: "問い合わせメール",
+          body: "一般的なお問い合わせは contact@startupzero.app までご連絡ください。",
+        },
+        bugs: {
+          title: "バグ報告",
+          body: "バグ報告時は、利用端末、ブラウザ、言語設定、クリックした場所、発生した内容を添えてください。",
+        },
+        adsPolicy: {
+          title: "広告・ポリシー関連",
+          body: "広告表示、プライバシー、ポリシーに関するお問い合わせは、該当ページと内容の概要を添えてください。",
+        },
+      },
     },
   },
   entities: {

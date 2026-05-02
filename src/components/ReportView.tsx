@@ -1,5 +1,6 @@
 import type { GameState } from "../gameState";
 import { useI18n } from "../i18n";
+import AdBanner from "./AdBanner";
 import CompactMetric from "./CompactMetric";
 import GraphPanel from "./GraphPanel";
 import MonthlyReportPanel from "./MonthlyReportPanel";
@@ -31,6 +32,7 @@ export default function ReportView({ state }: ReportViewProps) {
         <GraphPanel state={state} />
         <MonthlyReportPanel reports={state.monthlyReports} />
       </div>
+      <AdBanner />
     </div>
   );
 }

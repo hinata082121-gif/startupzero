@@ -8,7 +8,6 @@ export const en: TranslationTree = {
     save: "Save",
     load: "Load",
     newGame: "New Game",
-    premium: "Premium",
     free: "Free",
     locked: "Locked",
     empty: "Empty",
@@ -46,8 +45,6 @@ export const en: TranslationTree = {
     slotSaved: "Saved to slot {{slot}}.",
     slotEmpty: "Slot {{slot}} is empty.",
     slotLoaded: "Loaded slot {{slot}}.",
-    premiumOn: "Premium analysis enabled.",
-    premiumOff: "Premium analysis disabled.",
     bannerPlaying: "Survive long enough to reach $50,000 monthly revenue.",
     bannerWon: "Victory: revenue reached the success target.",
     bannerLost: "Game over. Start a new company and try again.",
@@ -61,6 +58,10 @@ export const en: TranslationTree = {
     mentor: "Mentor",
     log: "Log",
     help: "Help",
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    about: "About",
+    contact: "Contact",
     settings: "Settings",
   },
   home: {
@@ -85,7 +86,8 @@ export const en: TranslationTree = {
   },
   settings: {
     preferences: "Preferences",
-    premiumToggle: "Premium Advice",
+    adSupported: "Ad-supported. Extra guidance is funded by ads.",
+    siteLinks: "Site information",
     showTutorial: "Show Tutorial Again",
     openHelp: "Open Help",
   },
@@ -295,8 +297,8 @@ export const en: TranslationTree = {
   },
   mentor: {
     title: "AI Mentor",
-    premiumTitle: "Premium Analysis",
     basicTitle: "Basic Hint",
+    analysisTitle: "Ad-Supported Analysis",
     freePrompt: "Ask for a free hint once per turn.",
     getHint: "Get Free Hint",
     used: "Hint Used This Turn",
@@ -326,7 +328,8 @@ export const en: TranslationTree = {
     reasoning: "Reasoning",
     beginnerNote: "Beginner Note",
     freeLimit: "Free mentor view shows the most important analysis without overloading the screen.",
-    premiumDepth: "Premium view expands the recommendation list and gives a fuller operating read.",
+    adSupportedDepth: "Detailed mentor guidance is included and supported by ads, not subscriptions.",
+    adSupportedLabel: "Ad Supported",
     riskNoneDetailed: "No critical risk is active right now. Keep watching runway, morale, and market fit.",
     reasoningRiskFirst: "The recommendation prioritizes survival risks first. A company cannot use growth opportunities if cash or morale breaks.",
     reasoningGrowthBalance: "The recommendation balances growth and durability because the company is not in immediate danger.",
@@ -433,6 +436,7 @@ export const en: TranslationTree = {
     },
   },
   ads: {
+    advertisement: "Advertisement",
     bannerLabel: "Banner Ad",
     bannerText: "Dummy ad slot: founder tools, cloud credits, launch services.",
     sidebarLabel: "Sidebar Ad",
@@ -526,6 +530,116 @@ export const en: TranslationTree = {
     founders: {
       title: "About Founder Types",
       body: "Founder types change which actions feel natural. Pick one that matches how you want to play, but watch the weakness as much as the strength.",
+    },
+  },
+  site: {
+    privacy: {
+      eyebrow: "Policy",
+      title: "Privacy Policy",
+      intro: "This policy explains how Startup Zero handles privacy, cookies, advertising, and analytics.",
+      sections: {
+        overview: {
+          title: "Information We Handle",
+          body: "Startup Zero is a browser game. Game progress and language settings may be saved locally in your browser using localStorage so the game can continue after reloads.",
+        },
+        adsense: {
+          title: "Google AdSense",
+          body: "Startup Zero may use Google AdSense to display advertisements. Google and its partners may use advertising cookies to serve and measure ads on this site.",
+        },
+        cookies: {
+          title: "Cookie Use",
+          body: "Cookies and similar technologies may be used for advertising, basic site functionality, fraud prevention, frequency capping, and measurement.",
+        },
+        thirdParty: {
+          title: "Third-Party Vendors",
+          body: "Third-party ad providers, including Google, may use cookies to serve ads based on a user's prior visits to this and other websites.",
+        },
+        adCookies: {
+          title: "Advertising Cookies",
+          body: "Google advertising cookies may allow ads to be shown based on previous visits to this site or other sites on the internet.",
+        },
+        optOut: {
+          title: "Personalized Ad Choices",
+          body: "Users can disable personalized advertising through Google's Ads Settings. Browser cookie controls and industry opt-out tools may also be used where available.",
+        },
+        analytics: {
+          title: "Analytics",
+          body: "Startup Zero includes internal analytics for gameplay balance and may use analytics services in the future to understand page usage and improve the experience. Analytics data is used in aggregate where possible.",
+        },
+        contact: {
+          title: "Privacy Contact",
+          body: "For privacy, advertising, or policy questions, contact us at contact@startupzero.app.",
+        },
+      },
+    },
+    terms: {
+      eyebrow: "Terms",
+      title: "Terms of Use",
+      intro: "These terms describe the basic rules for using Startup Zero.",
+      sections: {
+        use: {
+          title: "Use of the Site",
+          body: "Startup Zero is provided as a browser-based simulation game. Please use the site lawfully and do not attempt to disrupt the service.",
+        },
+        game: {
+          title: "Game Content",
+          body: "The game is a simplified simulation and should not be treated as legal, financial, investment, or business advice.",
+        },
+        ads: {
+          title: "Advertising",
+          body: "The site may display advertisements. Ad placements are labeled and should not be confused with game controls.",
+        },
+        disclaimer: {
+          title: "Disclaimer",
+          body: "The service is provided as-is. We aim to keep the game available and accurate, but errors or interruptions may occur.",
+        },
+        changes: {
+          title: "Changes",
+          body: "The game, policies, and terms may be updated as features and site operations evolve.",
+        },
+      },
+    },
+    about: {
+      eyebrow: "About",
+      title: "About Startup Zero",
+      intro: "Startup Zero is a lightweight startup and management simulation game.",
+      sections: {
+        overview: {
+          title: "What It Is",
+          body: "Startup Zero lets you play as a founder making monthly decisions about product, hiring, marketing, funding, pivots, and team health.",
+        },
+        simulation: {
+          title: "Startup Simulation",
+          body: "The game models common startup tradeoffs such as cash runway, revenue growth, user acquisition, product progress, morale, and market fit.",
+        },
+        beginner: {
+          title: "Beginner Friendly",
+          body: "The interface includes help text, mentor guidance, reports, and analysis so players can learn the flow even without startup experience.",
+        },
+        education: {
+          title: "Educational Purpose",
+          body: "Startup Zero is designed for educational and experiential play. It helps players understand business tradeoffs through short, repeatable runs.",
+        },
+      },
+    },
+    contact: {
+      eyebrow: "Contact",
+      title: "Contact",
+      intro: "Use this page for product, bug, advertising, and policy-related contact information.",
+      sections: {
+        email: {
+          title: "Email",
+          body: "General inquiries can be sent to contact@startupzero.app.",
+        },
+        bugs: {
+          title: "Bug Reports",
+          body: "When reporting a bug, include the device, browser, language setting, what you clicked, and what happened.",
+        },
+        adsPolicy: {
+          title: "Advertising and Policy",
+          body: "For advertising placement, privacy, or policy questions, include the page and a short description of the concern.",
+        },
+      },
     },
   },
   entities: {

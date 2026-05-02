@@ -1,6 +1,7 @@
 import type { GameState } from "../gameState";
 import { generateHomeSummary } from "../analytics/gameAnalytics";
 import { useI18n } from "../i18n";
+import AdBanner from "./AdBanner";
 import StatCard from "./StatCard";
 import StatusBadge from "./StatusBadge";
 
@@ -126,6 +127,8 @@ export default function HomeView({ state, onGoActions, onGoMentor }: HomeViewPro
           </div>
         </div>
       </section>
+
+      <AdBanner />
     </div>
   );
 }

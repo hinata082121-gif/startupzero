@@ -10,22 +10,22 @@ import {
 } from "../gameState";
 import { useI18n } from "../i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
+import type { ActiveView } from "./Navigation";
 
 type SettingsViewProps = {
   state: GameState;
-  isPremiumUser: boolean;
   savedGameAvailable: boolean;
   saveSlots: Array<GameState | null>;
   selectedScenario: ScenarioType;
   selectedIndustry: IndustryType;
   selectedFounder: FounderType;
   setupMode?: boolean;
-  onPremiumChange: (enabled: boolean) => void;
   onSave: () => void;
   onLoad: () => void;
   onNewGame: () => void;
   onShowTutorial: () => void;
   onOpenHelp: () => void;
+  onNavigate: (view: ActiveView) => void;
   onSaveSlot: (slot: number) => void;
   onLoadSlot: (slot: number) => void;
   onScenarioChange: (scenario: ScenarioType) => void;
@@ -45,19 +45,18 @@ const allFounders: FounderType[] = [
 
 export default function SettingsView({
   state,
-  isPremiumUser,
   savedGameAvailable,
   saveSlots,
   selectedScenario,
   selectedIndustry,
   selectedFounder,
   setupMode = false,
-  onPremiumChange,
   onSave,
   onLoad,
   onNewGame,
   onShowTutorial,
   onOpenHelp,
+  onNavigate,
   onSaveSlot,
   onLoadSlot,
   onScenarioChange,
@@ -87,15 +86,9 @@ export default function SettingsView({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <LanguageSwitcher />
-            <label className="flex min-h-11 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-              <input
-                type="checkbox"
-                checked={isPremiumUser}
-                onChange={(event) => onPremiumChange(event.target.checked)}
-                className="h-4 w-4 accent-teal-700"
-              />
-              {t("settings.premiumToggle")}
-            </label>
+            <div className="flex min-h-11 items-center rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+              {t("settings.adSupported")}
+            </div>
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <button type="button" onClick={onSave} className="min-h-11 rounded-md bg-slate-950 px-4 py-2 text-sm font-bold text-white">
@@ -128,6 +121,23 @@ export default function SettingsView({
             >
               {t("settings.openHelp")}
             </button>
+          </div>
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+              {t("settings.siteLinks")}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {(["privacy", "terms", "about", "contact", "help"] as ActiveView[]).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => onNavigate(view)}
+                  className="min-h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"
+                >
+                  {t(`navigation.${view}`)}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 

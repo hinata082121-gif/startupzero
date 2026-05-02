@@ -8,6 +8,10 @@ export type ActiveView =
   | "mentor"
   | "log"
   | "help"
+  | "privacy"
+  | "terms"
+  | "about"
+  | "contact"
   | "settings";
 
 type NavigationProps = {

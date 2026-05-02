@@ -9,6 +9,7 @@ import { BannerAd } from "./components/AdPanels";
 import AnalysisView from "./components/AnalysisView";
 import ActionsView from "./components/ActionsView";
 import ChangeToast from "./components/ChangeToast";
+import FooterLinks from "./components/FooterLinks";
 import HelpView from "./components/HelpView";
 import HomeView from "./components/HomeView";
 import LogView from "./components/LogView";
@@ -17,6 +18,8 @@ import Navigation, { type ActiveView } from "./components/Navigation";
 import ReportView from "./components/ReportView";
 import SettingsView from "./components/SettingsView";
 import StatusBadge from "./components/StatusBadge";
+import StaticPageView from "./components/StaticPageView";
+import type { StaticPage } from "./components/StaticPageView";
 import TutorialOverlay from "./components/TutorialOverlay";
 import { playSound } from "./sound";
 import {
@@ -158,7 +161,6 @@ export default function App() {
   const [noticeParams, setNoticeParams] = useState<
     Record<string, string | number> | undefined
   >();
-  const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState<IndustryType>(
     "SaaS",
   );
@@ -309,12 +311,6 @@ export default function App() {
     setNoticeParams(undefined);
   };
 
-  const handlePremiumChange = (enabled: boolean) => {
-    setIsPremiumUser(enabled);
-    setNoticeKey(enabled ? "app.premiumOn" : "app.premiumOff");
-    setNoticeParams(undefined);
-  };
-
   const handleCloseTutorial = () => {
     localStorage.setItem(TUTORIAL_KEY, "true");
     localStorage.setItem(LEGACY_TUTORIAL_KEY, "true");
@@ -342,23 +338,26 @@ export default function App() {
       return <HelpView />;
     }
 
+    if (["privacy", "terms", "about", "contact"].includes(activeView)) {
+      return <StaticPageView page={activeView as StaticPage} />;
+    }
+
     if (showSetup) {
       return (
         <SettingsView
           state={state}
-          isPremiumUser={isPremiumUser}
           savedGameAvailable={savedGameAvailable}
           saveSlots={saveSlots}
           selectedScenario={selectedScenario}
           selectedIndustry={selectedIndustry}
           selectedFounder={selectedFounder}
           setupMode
-          onPremiumChange={handlePremiumChange}
           onSave={handleSave}
           onLoad={handleLoad}
           onNewGame={handleStartConfiguredGame}
           onShowTutorial={handleShowTutorial}
           onOpenHelp={() => setActiveView("help")}
+          onNavigate={setActiveView}
           onSaveSlot={handleSaveSlot}
           onLoadSlot={handleLoadSlot}
           onScenarioChange={setSelectedScenario}
@@ -382,28 +381,32 @@ export default function App() {
       case "analysis":
         return <AnalysisView state={state} />;
       case "mentor":
-        return <MentorView state={state} isPremiumUser={isPremiumUser} />;
+        return <MentorView state={state} />;
       case "log":
         return <LogView logs={state.logs} />;
       case "help":
         return <HelpView />;
+      case "privacy":
+      case "terms":
+      case "about":
+      case "contact":
+        return <StaticPageView page={activeView} />;
       case "settings":
         return (
           <SettingsView
             state={state}
-            isPremiumUser={isPremiumUser}
             savedGameAvailable={savedGameAvailable}
             saveSlots={saveSlots}
             selectedScenario={selectedScenario}
             selectedIndustry={selectedIndustry}
             selectedFounder={selectedFounder}
             setupMode={false}
-            onPremiumChange={handlePremiumChange}
             onSave={handleSave}
             onLoad={handleLoad}
             onNewGame={handleNewGame}
             onShowTutorial={handleShowTutorial}
             onOpenHelp={() => setActiveView("help")}
+            onNavigate={setActiveView}
             onSaveSlot={handleSaveSlot}
             onLoadSlot={handleLoadSlot}
             onScenarioChange={setSelectedScenario}
@@ -459,6 +462,7 @@ export default function App() {
           </div>
 
           <section className="min-h-[calc(100vh-220px)]">{renderView()}</section>
+          <FooterLinks onNavigate={setActiveView} />
         </div>
       </div>
 
