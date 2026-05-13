@@ -17,6 +17,9 @@ import LogView from "./components/LogView";
 import MentorView from "./components/MentorView";
 import MonthlyResultModal from "./components/MonthlyResultModal";
 import Navigation, { type ActiveView } from "./components/Navigation";
+import NotFoundPage from "./components/NotFoundPage";
+import PublicContentPage from "./components/PublicContentPage";
+import PublicSiteLayout from "./components/PublicSiteLayout";
 import RankingView from "./components/RankingView";
 import ReportView from "./components/ReportView";
 import SettingsView from "./components/SettingsView";
@@ -26,6 +29,7 @@ import StaticPageView from "./components/StaticPageView";
 import type { StaticPage } from "./components/StaticPageView";
 import TutorialOverlay from "./components/TutorialOverlay";
 import TurnProgressOverlay from "./components/TurnProgressOverlay";
+import { getPublicPage, publicRoutes, type PublicRoute } from "./content/publicPages";
 import { playSound } from "./sound";
 import {
   DEFAULT_META,
@@ -229,9 +233,45 @@ const saveToSlot = (slot: number, state: GameState) => {
 const TUTORIAL_KEY = "startup-zero-tutorial-seen";
 const LEGACY_TUTORIAL_KEY = "startup-zero-tutorial-seen-v1";
 
+const normalizePath = (path: string) => {
+  const normalized = path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path;
+  return normalized || "/";
+};
+
+const isPublicRoute = (path: string): path is PublicRoute =>
+  publicRoutes.includes(path as PublicRoute);
+
+const ensureMeta = (name: string, attr: "name" | "property" = "name") => {
+  const selector = `meta[${attr}="${name}"]`;
+  const existing = document.head.querySelector<HTMLMetaElement>(selector);
+  if (existing) {
+    return existing;
+  }
+
+  const meta = document.createElement("meta");
+  meta.setAttribute(attr, name);
+  document.head.appendChild(meta);
+  return meta;
+};
+
+const ensureCanonical = () => {
+  const existing = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (existing) {
+    return existing;
+  }
+
+  const link = document.createElement("link");
+  link.rel = "canonical";
+  document.head.appendChild(link);
+  return link;
+};
+
 export default function App() {
-  const { t } = useI18n();
+  const { t, currentLanguage } = useI18n();
   const isCraftNovaLayout = __CRAFTNOVA_BUILD__;
+  const [route, setRoute] = useState(() =>
+    typeof window === "undefined" ? "/" : normalizePath(window.location.pathname),
+  );
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [state, setState] = useState<GameState>(() => createInitialState());
   const [showSetup, setShowSetup] = useState(() => loadSavedGame() === null);
@@ -266,6 +306,58 @@ export default function App() {
       safeStorage.getItem(TUTORIAL_KEY) !== "true" &&
       safeStorage.getItem(LEGACY_TUTORIAL_KEY) !== "true",
   );
+
+  useEffect(() => {
+    if (isCraftNovaLayout) {
+      return;
+    }
+
+    const handlePopState = () => setRoute(normalizePath(window.location.pathname));
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isCraftNovaLayout]);
+
+  useEffect(() => {
+    if (isCraftNovaLayout || typeof document === "undefined") {
+      return;
+    }
+
+    const origin = window.location.origin;
+    const currentPath = normalizePath(window.location.pathname);
+    const canonicalPath = isPublicRoute(currentPath) ? currentPath : currentPath === "/play" ? "/play" : "/404";
+    const robots = ensureMeta("robots");
+    const canonical = ensureCanonical();
+
+    if (isPublicRoute(currentPath)) {
+      const page = getPublicPage(currentLanguage, currentPath);
+      document.title = page.title;
+      ensureMeta("description").content = page.description;
+      ensureMeta("og:title", "property").content = page.title;
+      ensureMeta("og:description", "property").content = page.description;
+      robots.content = "index,follow";
+      canonical.href = `${origin}${canonicalPath === "/" ? "/" : canonicalPath}`;
+      return;
+    }
+
+    if (currentPath === "/play") {
+      const title = "Startup Zero - Play";
+      const description = "Play Startup Zero, a browser startup simulation game.";
+      document.title = title;
+      ensureMeta("description").content = description;
+      ensureMeta("og:title", "property").content = title;
+      ensureMeta("og:description", "property").content = description;
+      robots.content = "noindex,follow";
+      canonical.href = `${origin}/play`;
+      return;
+    }
+
+    document.title = "Page not found - Startup Zero";
+    ensureMeta("description").content = "This Startup Zero page could not be found.";
+    ensureMeta("og:title", "property").content = "Page not found - Startup Zero";
+    ensureMeta("og:description", "property").content = "This Startup Zero page could not be found.";
+    robots.content = "noindex,follow";
+    canonical.href = `${origin}/404`;
+  }, [route, isCraftNovaLayout, currentLanguage]);
 
   const savedGameAvailable = useMemo(
     () => loadSavedGame() !== null,
@@ -460,7 +552,19 @@ export default function App() {
       ? t("app.bannerWon")
       : state.status === "lost"
         ? t("app.bannerLost")
-        : t("app.bannerPlaying");
+      : t("app.bannerPlaying");
+
+  if (!isCraftNovaLayout && isPublicRoute(route)) {
+    return (
+      <PublicSiteLayout activeRoute={route}>
+        <PublicContentPage route={route} />
+      </PublicSiteLayout>
+    );
+  }
+
+  if (!isCraftNovaLayout && route !== "/play") {
+    return <NotFoundPage />;
+  }
 
   const renderView = () => {
     if (activeView === "help") {
