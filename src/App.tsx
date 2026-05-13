@@ -5,16 +5,19 @@ import {
   trackGameStart,
   trackVictory,
 } from "./analytics/tracking";
-import { BannerAd } from "./components/AdPanels";
 import AnalysisView from "./components/AnalysisView";
 import ActionsView from "./components/ActionsView";
-import ChangeToast from "./components/ChangeToast";
+import AdBanner from "./components/AdBanner";
+import ActionConfirmModal from "./components/ActionConfirmModal";
 import FooterLinks from "./components/FooterLinks";
 import HelpView from "./components/HelpView";
 import HomeView from "./components/HomeView";
+import LeagueResultModal from "./components/LeagueResultModal";
 import LogView from "./components/LogView";
 import MentorView from "./components/MentorView";
+import MonthlyResultModal from "./components/MonthlyResultModal";
 import Navigation, { type ActiveView } from "./components/Navigation";
+import RankingView from "./components/RankingView";
 import ReportView from "./components/ReportView";
 import SettingsView from "./components/SettingsView";
 import NewGameSetupModal from "./components/setup/NewGameSetupModal";
@@ -22,6 +25,7 @@ import StatusBadge from "./components/StatusBadge";
 import StaticPageView from "./components/StaticPageView";
 import type { StaticPage } from "./components/StaticPageView";
 import TutorialOverlay from "./components/TutorialOverlay";
+import TurnProgressOverlay from "./components/TurnProgressOverlay";
 import { playSound } from "./sound";
 import {
   DEFAULT_META,
@@ -29,22 +33,33 @@ import {
   STORAGE_KEY,
   combineModifiers,
   createInitialState,
+  getCompetitionLevel,
+  initialCompetitionPressure,
   normalizeFounder,
   normalizeIndustry,
   normalizeScenario,
+  pickCompetitorName,
   type ActionType,
   type FounderType,
+  type GameMode,
   type GameState,
   type IndustryType,
   type MetaProgression,
+  type MonthlyReport,
   type ScenarioType,
 } from "./gameState";
-import { applyRewardAd, isGameState, playTurn } from "./gameEngine";
+import { isGameState, playTurn } from "./gameEngine";
 import { useI18n } from "./i18n";
+import { saveFounderLeagueRanking } from "./league/rankings";
+import { safeStorage } from "./utils/safeStorage";
 
 const hydrateMeta = (meta?: Partial<MetaProgression>): MetaProgression => ({
   ...DEFAULT_META,
   ...meta,
+  normalModeClears: meta?.normalModeClears ?? DEFAULT_META.normalModeClears,
+  founderLeagueUnlocked:
+    meta?.founderLeagueUnlocked ??
+    (meta?.normalModeClears ?? DEFAULT_META.normalModeClears) >= 2,
   unlockedIndustries: Array.from(
     new Set([
       ...DEFAULT_META.unlockedIndustries,
@@ -59,9 +74,30 @@ const hydrateMeta = (meta?: Partial<MetaProgression>): MetaProgression => ({
   ),
 });
 
+const defaultFounderName = () =>
+  (safeStorage.getItem("startup-zero-language") ?? navigator.language).toLowerCase().startsWith("ja")
+    ? "創業者"
+    : "Founder";
+
+const defaultCompanyName = () => "Zero Inc.";
+
 const hydrateGameState = (state: Partial<GameState>): GameState => ({
   ...state,
   runId: state.runId ?? crypto.randomUUID(),
+  hasStarted: typeof state.hasStarted === "boolean" ? state.hasStarted : true,
+  mode: state.mode ?? "normal",
+  gameMode: state.gameMode ?? state.mode ?? "normal",
+  isFounderLeague: typeof state.isFounderLeague === "boolean" ? state.isFounderLeague : (state.gameMode ?? state.mode) === "founderLeague",
+  maxMonths: state.maxMonths ?? ((state.gameMode ?? state.mode) === "founderLeague" ? 36 : 0),
+  leagueRunId: state.leagueRunId ?? state.runId ?? crypto.randomUUID(),
+  leagueSeed: state.leagueSeed ?? crypto.randomUUID().slice(0, 8),
+  leagueStartedAt: state.leagueStartedAt ?? new Date().toISOString(),
+  leagueEndedAt: state.leagueEndedAt,
+  hasSubmittedLocalRanking:
+    typeof state.hasSubmittedLocalRanking === "boolean" ? state.hasSubmittedLocalRanking : false,
+  founderName: state.founderName ?? defaultFounderName(),
+  companyName: state.companyName ?? defaultCompanyName(),
+  hasRecordedClear: typeof state.hasRecordedClear === "boolean" ? state.hasRecordedClear : false,
   industry: normalizeIndustry(state.selectedIndustry ?? state.industry),
   founder: normalizeFounder(state.selectedFounderType ?? state.founder),
   selectedIndustry: normalizeIndustry(state.selectedIndustry ?? state.industry),
@@ -86,6 +122,21 @@ const hydrateGameState = (state: Partial<GameState>): GameState => ({
   productProgress: state.productProgress ?? 20,
   marketFit: state.marketFit ?? 10,
   reputation: state.reputation ?? 42,
+  competitionPressure:
+    state.competitionPressure ??
+    initialCompetitionPressure[normalizeIndustry(state.selectedIndustry ?? state.industry)] ??
+    0,
+  mainCompetitorName:
+    state.mainCompetitorName ??
+    pickCompetitorName(
+      normalizeIndustry(state.selectedIndustry ?? state.industry),
+      state.leagueSeed ?? state.runId ?? "startup-zero",
+    ),
+  competitionLevel: state.competitionLevel ?? getCompetitionLevel(
+    state.competitionPressure ??
+      initialCompetitionPressure[normalizeIndustry(state.selectedIndustry ?? state.industry)] ??
+      0,
+  ),
   fundingStage: state.fundingStage ?? (state.scenario === "VC Funded" ? 1 : 0),
   burnRate: state.burnRate ?? 12000,
   runway: state.runway ?? 14,
@@ -101,11 +152,22 @@ const hydrateGameState = (state: Partial<GameState>): GameState => ({
   monthlyReports: Array.isArray(state.monthlyReports)
     ? state.monthlyReports.map((report) => ({
         ...report,
+        productProgressDelta: report.productProgressDelta ?? 0,
+        marketFitDelta: report.marketFitDelta ?? 0,
+        reputationDelta: report.reputationDelta ?? 0,
+        burnRateDelta: report.burnRateDelta ?? 0,
         summary: report.summaryKey ? report.summary : "",
         summaryKey: report.summaryKey ?? "reports.legacy",
       }))
     : [],
-  monthlyHistory: Array.isArray(state.monthlyHistory) ? state.monthlyHistory : [],
+  lastMonthDelta: state.lastMonthDelta ?? null,
+  monthlyHistory: Array.isArray(state.monthlyHistory)
+    ? state.monthlyHistory.map((snapshot) => ({
+        ...snapshot,
+        companyValuation: snapshot.companyValuation ?? 0,
+        founderScoreEstimate: snapshot.founderScoreEstimate ?? 0,
+      }))
+    : [],
   actionHistory: Array.isArray(state.actionHistory) ? state.actionHistory : [],
   eventHistory: Array.isArray(state.eventHistory) ? state.eventHistory : [],
   rewardAdWatched:
@@ -115,25 +177,34 @@ const hydrateGameState = (state: Partial<GameState>): GameState => ({
 
 const loadSavedGame = (): GameState | null => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeStorage.getItem(STORAGE_KEY);
     if (!raw) {
       return null;
     }
 
     const parsed = JSON.parse(raw);
-    return isGameState(parsed) ? hydrateGameState(parsed) : null;
+    if (!isGameState(parsed)) {
+      return null;
+    }
+
+    const hydrated = hydrateGameState(parsed);
+    return hydrated.hasStarted ? hydrated : null;
   } catch {
     return null;
   }
 };
 
 const saveGame = (state: GameState) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!state.hasStarted) {
+    return;
+  }
+
+  safeStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 };
 
 const loadSaveSlots = (): Array<GameState | null> => {
   try {
-    const raw = localStorage.getItem(SAVE_SLOTS_KEY);
+    const raw = safeStorage.getItem(SAVE_SLOTS_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return [0, 1, 2].map((index) =>
       parsed[index] && isGameState(parsed[index])
@@ -146,9 +217,13 @@ const loadSaveSlots = (): Array<GameState | null> => {
 };
 
 const saveToSlot = (slot: number, state: GameState) => {
+  if (!state.hasStarted) {
+    return;
+  }
+
   const slots = loadSaveSlots();
   slots[slot] = state;
-  localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(slots));
+  safeStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(slots));
 };
 
 const TUTORIAL_KEY = "startup-zero-tutorial-seen";
@@ -156,6 +231,7 @@ const LEGACY_TUTORIAL_KEY = "startup-zero-tutorial-seen-v1";
 
 export default function App() {
   const { t } = useI18n();
+  const isCraftNovaLayout = __CRAFTNOVA_BUILD__;
   const [activeView, setActiveView] = useState<ActiveView>("home");
   const [state, setState] = useState<GameState>(() => createInitialState());
   const [showSetup, setShowSetup] = useState(() => loadSavedGame() === null);
@@ -172,13 +248,24 @@ export default function App() {
   const [selectedScenario, setSelectedScenario] = useState<ScenarioType>(
     normalizeScenario(state.scenario),
   );
+  const [selectedMode, setSelectedMode] = useState<GameMode>("normal");
+  const [pendingAction, setPendingAction] = useState<ActionType | null>(null);
+  const [turnProgressMonth, setTurnProgressMonth] = useState<number | null>(null);
+  const [latestResult, setLatestResult] = useState<{
+    state: GameState;
+    report: MonthlyReport;
+    action: ActionType;
+  } | null>(null);
+  const [leagueResult, setLeagueResult] = useState<{
+    state: GameState;
+    rank: number;
+  } | null>(null);
   const [saveSlots, setSaveSlots] = useState(loadSaveSlots);
   const [showTutorial, setShowTutorial] = useState(
     () =>
-      localStorage.getItem(TUTORIAL_KEY) !== "true" &&
-      localStorage.getItem(LEGACY_TUTORIAL_KEY) !== "true",
+      safeStorage.getItem(TUTORIAL_KEY) !== "true" &&
+      safeStorage.getItem(LEGACY_TUTORIAL_KEY) !== "true",
   );
-  const [showChangeToast, setShowChangeToast] = useState(false);
 
   const savedGameAvailable = useMemo(
     () => loadSavedGame() !== null,
@@ -189,19 +276,33 @@ export default function App() {
     saveGame(state);
   }, [state]);
 
-  useEffect(() => {
-    if (!state.monthlyReports[0]) {
+  const handleAction = (action: ActionType) => {
+    setPendingAction(action);
+  };
+
+  const executePendingAction = () => {
+    if (!pendingAction) {
       return;
     }
 
-    setShowChangeToast(true);
-    const timeout = window.setTimeout(() => setShowChangeToast(false), 2600);
-    return () => window.clearTimeout(timeout);
-  }, [state.monthlyReports]);
+    const action = pendingAction;
+    setPendingAction(null);
+    setTurnProgressMonth(state.month);
 
-  const handleAction = (action: ActionType) => {
-    setState((current) => {
+    window.setTimeout(() => {
+      const current = state;
       const next = playTurn(current, action);
+      let nextState = next;
+      if (next.isFounderLeague && next.status !== "playing") {
+        const saved = saveFounderLeagueRanking(next);
+        nextState = {
+          ...next,
+          hasSubmittedLocalRanking: true,
+        };
+        setLeagueResult({ state: nextState, rank: saved.rank });
+      }
+
+      setState(nextState);
       trackActionSelected({
         action,
         month: current.month,
@@ -222,14 +323,29 @@ export default function App() {
             ? "success"
             : "action",
       );
-      return next;
-    });
-    setNoticeKey("app.turnPlayed");
-    setNoticeParams(undefined);
+      setTurnProgressMonth(null);
+      if (!next.isFounderLeague || next.status === "playing") {
+        if (nextState.monthlyReports[0]) {
+          setLatestResult({ state: nextState, report: nextState.monthlyReports[0], action });
+        }
+      }
+      setNoticeKey("app.turnPlayed");
+      setNoticeParams(undefined);
+    }, 900);
+  };
+
+  const closeMonthlyResult = () => {
+    setLatestResult(null);
     setActiveView("home");
   };
 
   const handleSave = () => {
+    if (!state.hasStarted) {
+      setNoticeKey("app.noSave");
+      setNoticeParams(undefined);
+      return;
+    }
+
     saveGame(state);
     setNoticeKey("app.gameSaved");
     setNoticeParams(undefined);
@@ -242,6 +358,7 @@ export default function App() {
       setSelectedIndustry(saved.industry);
       setSelectedFounder(saved.founder);
       setSelectedScenario(normalizeScenario(saved.scenario));
+      setSelectedMode(saved.gameMode ?? saved.mode);
       setNoticeKey("app.gameLoaded");
       setNoticeParams(undefined);
       setActiveView("home");
@@ -261,24 +378,29 @@ export default function App() {
   };
 
   const handleStartConfiguredGame = (setup?: {
+    mode: GameMode;
     scenario: ScenarioType;
     industry: IndustryType;
     founder: FounderType;
+    founderName: string;
+    companyName: string;
   }) => {
     const industry = setup?.industry ?? selectedIndustry;
     const founder = setup?.founder ?? selectedFounder;
     const scenario = setup?.scenario ?? selectedScenario;
-    const fresh = createInitialState(
-      state.meta,
-      industry,
-      founder,
-      scenario,
-    );
+    const mode = setup?.mode ?? selectedMode;
+    const founderName = setup?.founderName ?? t("setup.defaultFounderName");
+    const companyName = setup?.companyName ?? t("setup.defaultCompanyName");
+    const fresh = {
+      ...createInitialState(state.meta, industry, founder, scenario, mode, founderName, companyName),
+      hasStarted: true,
+    };
     trackGameStart({ runId: fresh.runId, industry, founder, scenario });
     setState(fresh);
     setSelectedIndustry(industry);
     setSelectedFounder(founder);
     setSelectedScenario(scenario);
+    setSelectedMode(mode);
     saveGame(fresh);
     setNoticeKey("app.newRun");
     setNoticeParams({
@@ -286,6 +408,8 @@ export default function App() {
       founder: `i18n:entities.founders.${founder}.title`,
     });
     setShowSetup(false);
+    setLeagueResult(null);
+    setLatestResult(null);
     setActiveView("home");
     playSound("success");
   };
@@ -308,22 +432,17 @@ export default function App() {
     setState(saved);
     setSelectedIndustry(saved.industry);
     setSelectedFounder(saved.founder);
-      setSelectedScenario(normalizeScenario(saved.scenario));
+    setSelectedScenario(normalizeScenario(saved.scenario));
+    setSelectedMode(saved.gameMode ?? saved.mode);
     setNoticeKey("app.slotLoaded");
     setNoticeParams({ slot: slot + 1 });
     setActiveView("home");
     setShowSetup(false);
   };
 
-  const handleRewardAd = () => {
-    setState((current) => applyRewardAd(current));
-    setNoticeKey("app.rewardClaimed");
-    setNoticeParams(undefined);
-  };
-
   const handleCloseTutorial = () => {
-    localStorage.setItem(TUTORIAL_KEY, "true");
-    localStorage.setItem(LEGACY_TUTORIAL_KEY, "true");
+    safeStorage.setItem(TUTORIAL_KEY, "true");
+    safeStorage.setItem(LEGACY_TUTORIAL_KEY, "true");
     setShowTutorial(false);
   };
 
@@ -358,7 +477,6 @@ export default function App() {
           <ActionsView
             state={state}
             onAction={handleAction}
-            onRewardAd={handleRewardAd}
           />
         );
       case "report":
@@ -367,6 +485,8 @@ export default function App() {
         return <AnalysisView state={state} />;
       case "mentor":
         return <MentorView state={state} />;
+      case "ranking":
+        return <RankingView />;
       case "log":
         return <LogView logs={state.logs} />;
       case "help":
@@ -405,46 +525,83 @@ export default function App() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 pb-44 lg:pb-12">
-      <div className="grid min-h-screen lg:grid-cols-[240px_minmax(0,1fr)]">
+    <main
+      className={
+        isCraftNovaLayout
+          ? "craftnova-compact h-[100dvh] overflow-hidden bg-slate-100 pb-16"
+          : "min-h-screen bg-slate-100 pb-44 lg:pb-12"
+      }
+    >
+      <div
+        className={
+          isCraftNovaLayout
+            ? "flex h-full min-h-0 flex-col"
+            : "grid min-h-screen lg:grid-cols-[240px_minmax(0,1fr)]"
+        }
+      >
         <Navigation activeView={activeView} onChange={setActiveView} />
 
-        <div className="min-w-0 px-3 py-4 sm:px-5 lg:px-6">
-          <header className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div
+          className={
+            isCraftNovaLayout
+              ? "flex min-h-0 min-w-0 flex-1 flex-col px-2 py-2"
+              : "min-w-0 px-3 py-4 sm:px-5 lg:px-6"
+          }
+        >
+          <header
+            className={
+              isCraftNovaLayout
+                ? "mb-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                : "mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            }
+          >
+            <div className={isCraftNovaLayout ? "flex items-center justify-between gap-2" : "flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"}>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
                   {t(`navigation.${activeView}`)}
                 </p>
-                <h1 className="mt-1 text-2xl font-bold text-slate-950 sm:text-3xl">
+                <h1 className={isCraftNovaLayout ? "mt-0.5 text-lg font-bold leading-tight text-slate-950" : "mt-1 text-2xl font-bold text-slate-950 sm:text-3xl"}>
                   {t("app.title")}
                 </h1>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                  {banner}
+                <p className={isCraftNovaLayout ? "mt-0.5 truncate text-xs font-bold text-slate-800" : "mt-1 text-sm font-bold text-slate-800"}>
+                  {state.companyName} / {t("home.ceoLine", { name: state.founderName })}
                 </p>
+                {!isCraftNovaLayout && (
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                    {banner}
+                  </p>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className={isCraftNovaLayout ? "flex max-w-[45%] flex-wrap items-center justify-end gap-1" : "flex flex-wrap items-center gap-2"}>
                 <StatusBadge status={state.status} />
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
                   {t("common.month", { month: state.month })}
                 </span>
-                <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700">
+                <span className="max-w-full truncate rounded-full bg-purple-100 px-2 py-1 text-xs font-bold text-purple-700">
                   {t(`entities.industries.${state.industry}.title`)}
                 </span>
               </div>
             </div>
           </header>
 
-          <div className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-950">
+          <div className={isCraftNovaLayout ? "mb-2 truncate rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-950" : "mb-4 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-950"}>
             {t(noticeKey, noticeParams)}
           </div>
 
-          <section className="min-h-[calc(100vh-220px)]">{renderView()}</section>
-          <FooterLinks onNavigate={setActiveView} />
+          <section
+            className={
+              isCraftNovaLayout
+                ? "min-h-0 flex-1 overflow-y-auto pr-1"
+                : "min-h-[calc(100vh-220px)]"
+            }
+          >
+            {renderView()}
+          </section>
+          <AdBanner view={showSetup ? "setup" : activeView} state={state} />
+          {!isCraftNovaLayout && <FooterLinks onNavigate={setActiveView} />}
         </div>
       </div>
 
-      <ChangeToast report={state.monthlyReports[0]} visible={showChangeToast} />
       {showTutorial && (
         <TutorialOverlay
           onClose={handleCloseTutorial}
@@ -460,9 +617,49 @@ export default function App() {
           canCancel={savedGameAvailable}
           onCancel={() => setShowSetup(false)}
           onStart={handleStartConfiguredGame}
+          initialMode={selectedMode}
+          defaultFounderName={t("setup.defaultFounderName")}
+          defaultCompanyName={t("setup.defaultCompanyName")}
         />
       )}
-      <BannerAd />
+      {pendingAction && (
+        <ActionConfirmModal
+          action={pendingAction}
+          onExecute={executePendingAction}
+          onCancel={() => setPendingAction(null)}
+        />
+      )}
+      {turnProgressMonth !== null && <TurnProgressOverlay month={turnProgressMonth} />}
+      {latestResult && (
+        <MonthlyResultModal
+          state={latestResult.state}
+          report={latestResult.report}
+          action={latestResult.action}
+          onNextMonth={closeMonthlyResult}
+        />
+      )}
+      {leagueResult && (
+        <LeagueResultModal
+          state={leagueResult.state}
+          rank={leagueResult.rank}
+          onViewRanking={() => {
+            setLeagueResult(null);
+            setActiveView("ranking");
+          }}
+          onTryAgain={() => {
+            setLeagueResult(null);
+            setSelectedMode("founderLeague");
+            setShowSetup(true);
+            setActiveView("home");
+          }}
+          onBackToNormal={() => {
+            setLeagueResult(null);
+            setSelectedMode("normal");
+            setShowSetup(true);
+            setActiveView("home");
+          }}
+        />
+      )}
     </main>
   );
 }

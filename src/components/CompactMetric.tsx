@@ -14,13 +14,15 @@ const accents: Record<NonNullable<CompactMetricProps["accent"]>, string> = {
 };
 
 export default function CompactMetric({ label, value, accent = "slate" }: CompactMetricProps) {
+  const isCraftNovaLayout = __CRAFTNOVA_BUILD__;
+
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+    <div className={isCraftNovaLayout ? "rounded-lg border border-slate-200 bg-white p-2 shadow-sm" : "rounded-lg border border-slate-200 bg-white p-3 shadow-sm"}>
       <div className="flex items-center gap-2">
         <span className={`h-2.5 w-2.5 rounded-full ${accents[accent]}`} />
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       </div>
-      <p className="mt-2 text-lg font-bold text-slate-950">{value}</p>
+      <p className={isCraftNovaLayout ? "mt-1 truncate text-sm font-bold text-slate-950" : "mt-2 text-lg font-bold text-slate-950"}>{value}</p>
     </div>
   );
 }

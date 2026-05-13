@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useI18n } from "../../i18n";
 
 type SetupOptionCardProps = {
@@ -5,11 +6,13 @@ type SetupOptionCardProps = {
   description: string;
   selected: boolean;
   disabled?: boolean;
+  disabledReason?: string;
   difficulty?: string;
   recommendation?: string;
   strengths?: string[];
   weaknesses?: string[];
   bonuses?: string[];
+  illustration?: ReactNode;
   onSelect: () => void;
 };
 
@@ -18,11 +21,13 @@ export default function SetupOptionCard({
   description,
   selected,
   disabled = false,
+  disabledReason,
   difficulty,
   recommendation,
   strengths = [],
   weaknesses = [],
   bonuses = [],
+  illustration,
   onSelect,
 }: SetupOptionCardProps) {
   const { t } = useI18n();
@@ -32,10 +37,11 @@ export default function SetupOptionCard({
       type="button"
       disabled={disabled}
       onClick={onSelect}
-      className={`min-h-28 rounded-lg border p-3 text-left transition ${
-        selected ? "border-teal-600 bg-teal-50 shadow-sm" : "border-slate-200 bg-white hover:bg-slate-50"
+      className={`group min-h-28 rounded-xl border p-3 text-left transition duration-200 ${
+        selected ? "border-teal-500 bg-teal-50 shadow-md shadow-teal-100 ring-2 ring-teal-200" : "border-slate-200 bg-white hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-sm"
       } disabled:cursor-not-allowed disabled:opacity-45`}
     >
+      {illustration && <div className="mb-3">{illustration}</div>}
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-black text-slate-950">{title}</h3>
         {recommendation && (
@@ -50,6 +56,11 @@ export default function SetupOptionCard({
         )}
       </div>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{description}</p>
+      {disabledReason && (
+        <p className="mt-2 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-bold leading-4 text-slate-700">
+          {disabledReason}
+        </p>
+      )}
       {selected && (
         <div className="mt-3 grid gap-1 text-[11px] leading-4 text-slate-600">
           {strengths.length > 0 && (

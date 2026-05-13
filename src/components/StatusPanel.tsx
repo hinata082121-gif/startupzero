@@ -1,20 +1,14 @@
 import type { ReactNode } from "react";
 import type { GameState } from "../gameState";
+import { formatCurrency } from "../formatters";
 import { useI18n } from "../i18n";
 
 type StatusPanelProps = {
   state: GameState;
 };
 
-const money = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-
 export default function StatusPanel({ state }: StatusPanelProps) {
-  const { t } = useI18n();
+  const { t, currentLanguage } = useI18n();
   const monthlyNet = state.revenue - state.burnRate;
   const runwayFill = monthlyNet >= 0 ? 100 : Math.min(100, Math.max(4, (state.runway / 18) * 100));
   const moraleFill = Math.max(0, Math.min(100, state.teamMorale));
@@ -43,9 +37,9 @@ export default function StatusPanel({ state }: StatusPanelProps) {
 
       <div className="space-y-4">
         <StatusGroup title={t("dashboard.finance")}>
-          <HighlightStat label={t("dashboard.cash")} value={money(state.cash)} tone={state.cash < state.burnRate ? "danger" : "good"} />
-          <StatRow label={t("dashboard.revenue")} value={`${money(state.revenue)} ${t("common.perMonth")}`} />
-          <StatRow label={t("dashboard.burn")} value={`${money(state.burnRate)} ${t("common.perMonth")}`} />
+          <HighlightStat label={t("dashboard.cash")} value={formatCurrency(state.cash, currentLanguage)} tone={state.cash < state.burnRate ? "danger" : "good"} />
+          <StatRow label={t("dashboard.revenue")} value={`${formatCurrency(state.revenue, currentLanguage)} ${t("common.perMonth")}`} />
+          <StatRow label={t("dashboard.burn")} value={`${formatCurrency(state.burnRate, currentLanguage)} ${t("common.perMonth")}`} />
           <div className="pt-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium text-slate-600">{t("dashboard.runway")}</span>

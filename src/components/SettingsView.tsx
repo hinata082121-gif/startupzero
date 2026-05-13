@@ -1,4 +1,5 @@
 import type { GameState } from "../gameState";
+import { formatCurrency } from "../formatters";
 import { useI18n } from "../i18n";
 import LanguageSwitcher from "./LanguageSwitcher";
 import type { ActiveView } from "./Navigation";
@@ -108,7 +109,7 @@ export default function SettingsView({
 }
 
 function MetaPanel({ state }: { state: GameState }) {
-  const { t } = useI18n();
+  const { t, currentLanguage } = useI18n();
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -119,7 +120,11 @@ function MetaPanel({ state }: { state: GameState }) {
       </h2>
       <div className="mt-4 space-y-3 text-sm text-slate-700">
         <InfoRow label={t("dashboard.runs")} value={state.meta.runs.toLocaleString()} />
-        <InfoRow label={t("dashboard.bestRevenue")} value={`$${state.meta.bestRevenue.toLocaleString()}`} />
+        <InfoRow label={t("dashboard.bestRevenue")} value={formatCurrency(state.meta.bestRevenue, currentLanguage)} />
+        <InfoRow
+          label={t("modes.founderLeague.progressLabel")}
+          value={`${Math.min(state.meta.normalModeClears, 2)} / 2`}
+        />
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {t("dashboard.currentRun")}
@@ -169,7 +174,7 @@ function SaveSlotsPanel({
   onSave: (slot: number) => void;
   onLoad: (slot: number) => void;
 }) {
-  const { t } = useI18n();
+  const { t, currentLanguage } = useI18n();
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3">
@@ -188,7 +193,7 @@ function SaveSlotsPanel({
                     month: slot.month,
                     scenario: `i18n:entities.scenarios.${slot.scenario}.title`,
                     industry: `i18n:entities.industries.${slot.industry}.title`,
-                    revenue: slot.revenue.toLocaleString(),
+                    revenue: formatCurrency(slot.revenue, currentLanguage),
                   })
                 : t("common.empty")}
             </p>

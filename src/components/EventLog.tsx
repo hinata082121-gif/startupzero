@@ -16,20 +16,22 @@ const kindStyles: Record<LogKind, { icon: string; className: string }> = {
 
 export default function EventLog({ logs }: EventLogProps) {
   const { t } = useI18n();
+  const isCraftNovaLayout = __CRAFTNOVA_BUILD__;
+
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4">
+    <section className={isCraftNovaLayout ? "rounded-lg border border-slate-200 bg-white p-3 shadow-sm" : "rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5"}>
+      <div className={isCraftNovaLayout ? "mb-2" : "mb-4"}>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("dashboard.feedback")}</p>
-        <h2 className="text-2xl font-bold text-slate-950">{t("dashboard.eventLog")}</h2>
+        <h2 className={isCraftNovaLayout ? "text-xl font-bold text-slate-950" : "text-2xl font-bold text-slate-950"}>{t("dashboard.eventLog")}</h2>
       </div>
 
-      <div className="max-h-[32rem] space-y-3 overflow-y-auto pr-1">
+      <div className={isCraftNovaLayout ? "max-h-[calc(100dvh-220px)] space-y-2 overflow-y-auto pr-1" : "max-h-[32rem] space-y-3 overflow-y-auto pr-1"}>
         {logs.map((log) => {
           const kind = log.kind ?? "system";
           const style = kindStyles[kind];
 
           return (
-            <div key={log.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div key={log.id} className={isCraftNovaLayout ? "rounded-lg border border-slate-200 bg-slate-50 p-2" : "rounded-lg border border-slate-200 bg-slate-50 p-3"}>
               <div className="flex items-start gap-3">
                 <span className={`flex h-8 min-w-8 items-center justify-center rounded-full text-xs font-bold ${style.className}`}>
                   {style.icon}
@@ -43,7 +45,7 @@ export default function EventLog({ logs }: EventLogProps) {
                       {t(`common.kinds.${kind}`)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-700">
+                  <p className={isCraftNovaLayout ? "mt-1 line-clamp-2 text-xs leading-5 text-slate-700" : "mt-1 text-sm leading-6 text-slate-700"}>
                     {log.messageKey ? t(log.messageKey, log.params) : log.message}
                   </p>
                 </div>

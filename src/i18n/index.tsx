@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { en } from "./en";
 import { ja } from "./ja";
 import type { Language, TFunction, TranslationParams, TranslationTree } from "./types";
+import { safeStorage } from "../utils/safeStorage";
 
 export const LANGUAGE_STORAGE_KEY = "startup-zero-language";
 const LEGACY_LANGUAGE_STORAGE_KEY = "startup-zero-language-v1";
@@ -33,8 +34,8 @@ const getNestedValue = (tree: TranslationTree, key: string): string | undefined 
 
 const detectInitialLanguage = (): Language => {
   const saved =
-    localStorage.getItem(LANGUAGE_STORAGE_KEY) ??
-    localStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY);
+    safeStorage.getItem(LANGUAGE_STORAGE_KEY) ??
+    safeStorage.getItem(LEGACY_LANGUAGE_STORAGE_KEY);
   if (saved === "en" || saved === "ja") {
     return saved;
   }
@@ -73,8 +74,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return {
       currentLanguage,
       setLanguage: (language) => {
-        localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-        localStorage.setItem(LEGACY_LANGUAGE_STORAGE_KEY, language);
+        safeStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+        safeStorage.setItem(LEGACY_LANGUAGE_STORAGE_KEY, language);
         setCurrentLanguage(language);
       },
       t,

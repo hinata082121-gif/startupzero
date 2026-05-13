@@ -1,27 +1,21 @@
+import type { AppView } from "../ads/adPolicy";
+import { canShowAds } from "../ads/adPolicy";
+import AdSlot from "@ads/AdSlot";
+import type { GameState } from "../gameState";
 import { useI18n } from "../i18n";
 
-export default function AdBanner() {
+type AdBannerProps = {
+  view: AppView;
+  state: GameState;
+};
+
+export default function AdBanner({ view, state }: AdBannerProps) {
   const { t } = useI18n();
   const label = t("ads.advertisement");
 
-  return (
-    <div
-      aria-label={label}
-      style={{
-        width: "100%",
-        maxWidth: "728px",
-        height: "90px",
-        background: "#f5f5f5",
-        border: "1px solid #ddd",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "12px",
-        color: "#888",
-        margin: "0 auto",
-      }}
-    >
-      {label}
-    </div>
-  );
+  if (!canShowAds(view, state)) {
+    return null;
+  }
+
+  return <AdSlot label={label} />;
 }

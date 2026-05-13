@@ -1,38 +1,32 @@
 import type { GameState } from "../gameState";
+import { formatCurrency } from "../formatters";
 import { useI18n } from "../i18n";
 
 type GraphPanelProps = {
   state: GameState;
 };
 
-const money = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-    notation: "compact",
-  }).format(value);
-
 export default function GraphPanel({ state }: GraphPanelProps) {
-  const { t } = useI18n();
+  const { t, currentLanguage } = useI18n();
+  const isCraftNovaLayout = __CRAFTNOVA_BUILD__;
   const points = buildGraphPoints(state);
   const userPath = buildPath(points.map((point) => point.users));
   const revenuePath = buildPath(points.map((point) => point.revenue));
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <section className={isCraftNovaLayout ? "rounded-lg border border-slate-200 bg-white p-3 shadow-sm" : "rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5"}>
+      <div className={isCraftNovaLayout ? "mb-2 flex items-start justify-between gap-3" : "mb-4 flex items-start justify-between gap-4"}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("dashboard.graphEyebrow")}</p>
-          <h2 className="text-2xl font-bold text-slate-950">{t("dashboard.graphTitle")}</h2>
+          <h2 className={isCraftNovaLayout ? "text-base font-bold text-slate-950" : "text-2xl font-bold text-slate-950"}>{t("dashboard.graphTitle")}</h2>
         </div>
         <div className="text-right text-sm">
           <p className="font-bold text-teal-700">{state.users.toLocaleString()} {t("common.users")}</p>
-          <p className="font-bold text-sky-700">{money(state.revenue)} {t("common.mrr")}</p>
+          <p className="font-bold text-sky-700">{formatCurrency(state.revenue, currentLanguage)} {t("common.mrr")}</p>
         </div>
       </div>
 
-      <div className="h-56 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className={isCraftNovaLayout ? "h-36 rounded-lg border border-slate-200 bg-slate-50 p-2" : "h-56 rounded-lg border border-slate-200 bg-slate-50 p-3"}>
         <svg viewBox="0 0 320 160" className="h-full w-full" role="img" aria-label={t("dashboard.graphTitle")}>
           <line x1="18" y1="138" x2="306" y2="138" stroke="#cbd5e1" strokeWidth="1" />
           <line x1="18" y1="18" x2="18" y2="138" stroke="#cbd5e1" strokeWidth="1" />
@@ -50,7 +44,7 @@ export default function GraphPanel({ state }: GraphPanelProps) {
         </svg>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
+      <div className={isCraftNovaLayout ? "mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600" : "mt-3 flex flex-wrap gap-3 text-xs font-semibold text-slate-600"}>
         <span className="flex items-center gap-2">
           <span className="h-2 w-5 rounded-full bg-teal-700" />
           {t("dashboard.users")}

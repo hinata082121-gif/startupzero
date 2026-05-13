@@ -18,7 +18,7 @@ const sectionKeys: Record<StaticPage, string[]> = {
     "contact",
   ],
   terms: ["use", "game", "ads", "disclaimer", "changes"],
-  about: ["overview", "simulation", "beginner", "education"],
+  about: ["overview", "simulation", "beginner", "education", "learning", "play", "purpose"],
   contact: ["email", "bugs", "adsPolicy"],
 };
 

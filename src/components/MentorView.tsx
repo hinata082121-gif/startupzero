@@ -1,5 +1,4 @@
 import type { GameState } from "../gameState";
-import { SidebarAd } from "./AdPanels";
 import MentorPanel from "./MentorPanel";
 
 type MentorViewProps = {
@@ -8,9 +7,8 @@ type MentorViewProps = {
 
 export default function MentorView({ state }: MentorViewProps) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="space-y-4">
       <MentorPanel state={state} />
-      <SidebarAd />
     </div>
   );
 }

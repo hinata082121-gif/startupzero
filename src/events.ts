@@ -678,13 +678,114 @@ export const randomEvents: GameEvent[] = [
       reputation: state.reputation + 2,
     }),
   },
+  {
+    id: "competitorFeatureLaunch",
+    titleKey: "events.competitorFeatureLaunch.title",
+    descriptionKey: "events.competitorFeatureLaunch.description",
+    type: "common",
+    industry: "Common",
+    tags: ["negative", "competition", "growth"],
+    baseWeight: 7,
+    minMonth: 4,
+    condition: (state) => state.isFounderLeague,
+    apply: (state) => ({
+      ...state,
+      competitionPressure: state.competitionPressure + randomInt(5, 11),
+      users: Math.max(0, state.users - randomInt(30, 160)),
+      marketFit: state.marketFit - 3,
+    }),
+  },
+  {
+    id: "competitorPriceCut",
+    titleKey: "events.competitorPriceCut.title",
+    descriptionKey: "events.competitorPriceCut.description",
+    type: "common",
+    industry: "Common",
+    tags: ["negative", "competition", "cash"],
+    baseWeight: 6,
+    minMonth: 6,
+    condition: (state) => state.isFounderLeague,
+    apply: (state) => ({
+      ...state,
+      competitionPressure: state.competitionPressure + randomInt(4, 9),
+      revenue: Math.max(0, state.revenue - randomInt(1800, 7200)),
+    }),
+  },
+  {
+    id: "competitorMegaRound",
+    titleKey: "events.competitorMegaRound.title",
+    descriptionKey: "events.competitorMegaRound.description",
+    type: "common",
+    industry: "Common",
+    tags: ["negative", "competition", "reputation"],
+    baseWeight: 5,
+    minMonth: 8,
+    condition: (state) => state.isFounderLeague,
+    apply: (state) => ({
+      ...state,
+      competitionPressure: state.competitionPressure + randomInt(8, 14),
+      reputation: state.reputation - 4,
+    }),
+  },
+  {
+    id: "competitorMediaSpotlight",
+    titleKey: "events.competitorMediaSpotlight.title",
+    descriptionKey: "events.competitorMediaSpotlight.description",
+    type: "common",
+    industry: "Common",
+    tags: ["negative", "competition", "reputation"],
+    baseWeight: 5,
+    minMonth: 5,
+    condition: (state) => state.isFounderLeague,
+    apply: (state) => ({
+      ...state,
+      competitionPressure: state.competitionPressure + randomInt(4, 10),
+      reputation: state.reputation - 3,
+    }),
+  },
+  {
+    id: "competitorUsersSwitch",
+    titleKey: "events.competitorUsersSwitch.title",
+    descriptionKey: "events.competitorUsersSwitch.description",
+    type: "common",
+    industry: "Common",
+    tags: ["positive", "competition", "growth"],
+    baseWeight: 4,
+    minMonth: 8,
+    condition: (state) => state.isFounderLeague && state.reputation >= 50,
+    apply: (state) => ({
+      ...state,
+      competitionPressure: Math.max(0, state.competitionPressure - randomInt(5, 12)),
+      users: state.users + randomInt(120, 520),
+      revenue: state.revenue + randomInt(2200, 9000),
+    }),
+  },
+  {
+    id: "competitorOutageOpportunity",
+    titleKey: "events.competitorOutageOpportunity.title",
+    descriptionKey: "events.competitorOutageOpportunity.description",
+    type: "common",
+    industry: "Common",
+    tags: ["positive", "competition", "reputation"],
+    baseWeight: 4,
+    minMonth: 7,
+    condition: (state) => state.isFounderLeague,
+    apply: (state) => ({
+      ...state,
+      competitionPressure: Math.max(0, state.competitionPressure - randomInt(4, 10)),
+      reputation: state.reputation + 5,
+      users: state.users + randomInt(80, 360),
+    }),
+  },
 ];
 
 const getEventChance = (state: GameState) => {
   const scenarioRisk = scenarioConfig[state.scenario]?.eventRisk ?? 1;
   const phaseChance = (state.month <= 5 ? 0.22 : state.month <= 15 ? 0.36 : 0.48) * scenarioRisk;
   const stressBonus = state.month > 5 && (state.runway < 4 || state.teamMorale < 30) ? 0.06 : 0;
-  return Math.min(0.55, phaseChance + stressBonus);
+  const leagueBonus = state.isFounderLeague ? 0.05 : 0;
+  const competitionBonus = state.isFounderLeague ? Math.min(0.08, state.competitionPressure / 1200) : 0;
+  return Math.min(0.65, phaseChance + stressBonus + leagueBonus + competitionBonus);
 };
 
 const getEventWeight = (event: GameEvent, state: GameState) => {
@@ -758,6 +859,10 @@ const getEventWeight = (event: GameEvent, state: GameState) => {
 
   if (state.industry === "AI" && event.tags.includes("competition")) {
     weight *= 1.15;
+  }
+
+  if (state.isFounderLeague && event.tags.includes("competition")) {
+    weight *= 1.2 + state.competitionPressure / 85;
   }
 
   if (state.founder === "Growth Founder" && event.titleKey === "events.viralBuzz.title") {

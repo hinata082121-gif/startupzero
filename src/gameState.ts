@@ -19,6 +19,8 @@ export type IndustryType =
 
 export type ScenarioType = "Standard Startup" | "Bootstrapped" | "VC Funded" | "Crisis Mode";
 
+export type GameMode = "normal" | "founderLeague";
+
 export type FounderType =
   | "Engineer Founder"
   | "Sales Founder"
@@ -32,9 +34,13 @@ export type EndingType =
   | "Unicorn"
   | "Exit"
   | "Bankruptcy"
+  | "Team Collapse"
+  | "Founder League Complete"
   | "Lifestyle Business"
   | "MVP Success"
   | null;
+
+export type CompetitionLevel = "low" | "medium" | "high" | "extreme";
 
 export type AchievementId =
   | "first_fundraise"
@@ -60,10 +66,26 @@ export type MonthlyReport = {
   revenueDelta: number;
   usersDelta: number;
   moraleDelta: number;
+  productProgressDelta: number;
+  marketFitDelta: number;
+  reputationDelta: number;
+  burnRateDelta: number;
   runway: number;
   summary: string;
   summaryKey?: string;
   summaryParams?: Record<string, string | number>;
+};
+
+export type MonthlyDelta = {
+  cash: number;
+  revenue: number;
+  users: number;
+  teamMorale: number;
+  productProgress: number;
+  marketFit: number;
+  reputation: number;
+  burnRate: number;
+  runway: number;
 };
 
 export type MonthlySnapshot = {
@@ -77,6 +99,8 @@ export type MonthlySnapshot = {
   productProgress: number;
   marketFit: number;
   reputation: number;
+  companyValuation?: number;
+  founderScoreEstimate?: number;
 };
 
 export type ActionHistoryEntry = {
@@ -97,6 +121,8 @@ export type MetaProgression = {
   xp: number;
   runs: number;
   bestRevenue: number;
+  normalModeClears: number;
+  founderLeagueUnlocked: boolean;
   unlockedIndustries: IndustryType[];
   unlockedFounders: FounderType[];
   achievements: AchievementId[];
@@ -116,6 +142,19 @@ export type GameModifiers = {
 
 export type GameState = {
   runId: string;
+  hasStarted: boolean;
+  mode: GameMode;
+  gameMode: GameMode;
+  isFounderLeague: boolean;
+  maxMonths: number;
+  leagueRunId: string;
+  leagueSeed: string;
+  leagueStartedAt: string;
+  leagueEndedAt?: string;
+  hasSubmittedLocalRanking: boolean;
+  founderName: string;
+  companyName: string;
+  hasRecordedClear: boolean;
   month: number;
   scenario: ScenarioType;
   industry: IndustryType;
@@ -135,6 +174,9 @@ export type GameState = {
   productProgress: number;
   marketFit: number;
   reputation: number;
+  competitionPressure: number;
+  mainCompetitorName: string;
+  competitionLevel: CompetitionLevel;
   fundingStage: number;
   burnRate: number;
   runway: number;
@@ -143,6 +185,7 @@ export type GameState = {
   metaAwarded: boolean;
   logs: LogEntry[];
   monthlyReports: MonthlyReport[];
+  lastMonthDelta: MonthlyDelta | null;
   monthlyHistory: MonthlySnapshot[];
   actionHistory: ActionHistoryEntry[];
   eventHistory: EventHistoryEntry[];
@@ -157,6 +200,8 @@ export const DEFAULT_META: MetaProgression = {
   xp: 0,
   runs: 0,
   bestRevenue: 0,
+  normalModeClears: 0,
+  founderLeagueUnlocked: false,
   unlockedIndustries: ["Local Business Tech", "SaaS", "Game", "AI", "Marketplace"],
   unlockedFounders: [
     "Product Founder",
@@ -166,6 +211,35 @@ export const DEFAULT_META: MetaProgression = {
     "Bootstrap Founder",
   ],
   achievements: [],
+};
+
+export const competitorNames: Record<IndustryType, string[]> = {
+  SaaS: ["CloudWorks Pro", "FlowBase", "TaskHive"],
+  Game: ["PixelNova", "NeonForge", "StreamQuest"],
+  AI: ["NeuralPeak", "PromptAxis", "OmniModel Labs"],
+  Marketplace: ["TradeLoop", "MatchGrid", "SupplyHub"],
+  "Local Business Tech": ["LocalFlow", "ShopMate Pro", "TownWorks"],
+};
+
+export const initialCompetitionPressure: Record<IndustryType, number> = {
+  "Local Business Tech": 25,
+  SaaS: 40,
+  Game: 50,
+  AI: 60,
+  Marketplace: 65,
+};
+
+export const getCompetitionLevel = (pressure: number): CompetitionLevel => {
+  if (pressure >= 80) return "extreme";
+  if (pressure >= 60) return "high";
+  if (pressure >= 35) return "medium";
+  return "low";
+};
+
+export const pickCompetitorName = (industry: IndustryType, seed: string) => {
+  const names = competitorNames[industry];
+  const index = Math.abs(seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)) % names.length;
+  return names[index];
 };
 
 export const DEFAULT_MODIFIERS: GameModifiers = {
@@ -596,6 +670,9 @@ export const createInitialState = (
   industry: IndustryType = "SaaS",
   founder: FounderType = "Product Founder",
   scenario: ScenarioType = "Standard Startup",
+  mode: GameMode = "normal",
+  founderName = "Founder",
+  companyName = "Zero Inc.",
 ): GameState => {
   industry = normalizeIndustry(industry);
   founder = normalizeFounder(founder);
@@ -613,6 +690,8 @@ export const createInitialState = (
   let fundingStage = scenario === "VC Funded" ? 1 : 0;
   let burnRate = Math.round(industrySettings.burn * scenarioSettings.burnMultiplier * modifiers.burnRate);
   const trait = getRandomTrait();
+  const leagueSeed = crypto.randomUUID().slice(0, 8);
+  const competitionPressure = initialCompetitionPressure[industry] + (mode === "founderLeague" ? 8 : 0);
 
   if (founder === "Engineer Founder") {
     productProgress += 10;
@@ -667,6 +746,18 @@ export const createInitialState = (
 
   return {
     runId: crypto.randomUUID(),
+    hasStarted: false,
+    mode,
+    gameMode: mode,
+    isFounderLeague: mode === "founderLeague",
+    maxMonths: mode === "founderLeague" ? 36 : 0,
+    leagueRunId: crypto.randomUUID(),
+    leagueSeed,
+    leagueStartedAt: new Date().toISOString(),
+    hasSubmittedLocalRanking: false,
+    founderName: founderName.trim() || "Founder",
+    companyName: companyName.trim() || "Zero Inc.",
+    hasRecordedClear: false,
     month: 1,
     scenario,
     industry,
@@ -686,6 +777,9 @@ export const createInitialState = (
     productProgress,
     marketFit,
     reputation,
+    competitionPressure,
+    mainCompetitorName: pickCompetitorName(industry, leagueSeed),
+    competitionLevel: getCompetitionLevel(competitionPressure),
     fundingStage,
     burnRate,
     runway: calculateRunway(cash, revenue, burnRate),
@@ -708,6 +802,7 @@ export const createInitialState = (
       },
     ],
     monthlyReports: [],
+    lastMonthDelta: null,
     monthlyHistory: [],
     actionHistory: [],
     eventHistory: [],
@@ -715,6 +810,10 @@ export const createInitialState = (
     meta: {
       ...DEFAULT_META,
       ...meta,
+      normalModeClears: meta.normalModeClears ?? DEFAULT_META.normalModeClears,
+      founderLeagueUnlocked:
+        meta.founderLeagueUnlocked ??
+        (meta.normalModeClears ?? DEFAULT_META.normalModeClears) >= 2,
       unlockedIndustries: Array.from(
         new Set([
           ...DEFAULT_META.unlockedIndustries,

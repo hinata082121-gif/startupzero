@@ -1,6 +1,7 @@
 import type { FounderType, MetaProgression } from "../../gameState";
 import { founderConfig } from "../../gameState";
 import { useI18n } from "../../i18n";
+import FounderIllustration from "../founders/FounderIllustration";
 import SetupOptionCard from "./SetupOptionCard";
 
 type FounderSelectStepProps = {
@@ -39,6 +40,7 @@ export default function FounderSelectStep({
             description={t(config.description)}
             difficulty={t(`setup.difficulty.${config.difficulty}`)}
             recommendation={t(config.recommendationKey)}
+            illustration={<FounderIllustration founder={founder} />}
             strengths={config.strengths.map((key) => t(key))}
             weaknesses={config.weaknesses.map((key) => t(key))}
             bonuses={config.initialBonus.map((key) => t(key))}

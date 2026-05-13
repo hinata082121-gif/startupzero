@@ -2,9 +2,12 @@ import {
   DEFAULT_META,
   calculateRunway,
   combineModifiers,
+  getCompetitionLevel,
+  initialCompetitionPressure,
   industryConfig,
   normalizeFounder,
   normalizeIndustry,
+  pickCompetitorName,
   type ActionType,
   type ActionHistoryEntry,
   type AchievementId,
@@ -16,6 +19,7 @@ import {
   type MonthlySnapshot,
 } from "./gameState";
 import { drawRandomEvent } from "./events";
+import { calculateCompanyValuation, calculateFounderScore } from "./scoring/founderScore";
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -46,6 +50,8 @@ const createSnapshot = (state: GameState): MonthlySnapshot => ({
   productProgress: state.productProgress,
   marketFit: state.marketFit,
   reputation: state.reputation,
+  companyValuation: calculateCompanyValuation(state),
+  founderScoreEstimate: calculateFounderScore(state),
 });
 
 const getPhase = (state: GameState) => {
@@ -99,8 +105,20 @@ const normalizeState = (state: GameState): GameState => {
   const industry = normalizeIndustry(state.selectedIndustry ?? state.industry);
   const founder = normalizeFounder(state.selectedFounderType ?? state.founder);
   const modifiers = state.modifiers ?? combineModifiers(industry, founder);
+  const gameMode = state.gameMode ?? state.mode ?? "normal";
+  const competitionPressure = clamp(Math.round(state.competitionPressure ?? initialCompetitionPressure[industry] ?? 0), 0, 100);
   const normalized = {
     ...state,
+    mode: state.mode ?? gameMode,
+    gameMode,
+    isFounderLeague: typeof state.isFounderLeague === "boolean" ? state.isFounderLeague : gameMode === "founderLeague",
+    maxMonths: state.maxMonths ?? (gameMode === "founderLeague" ? 36 : 0),
+    leagueRunId: state.leagueRunId ?? state.runId ?? crypto.randomUUID(),
+    leagueSeed: state.leagueSeed ?? crypto.randomUUID().slice(0, 8),
+    leagueStartedAt: state.leagueStartedAt ?? new Date().toISOString(),
+    leagueEndedAt: state.leagueEndedAt,
+    hasSubmittedLocalRanking:
+      typeof state.hasSubmittedLocalRanking === "boolean" ? state.hasSubmittedLocalRanking : false,
     industry,
     founder,
     selectedIndustry: industry,
@@ -114,6 +132,10 @@ const normalizeState = (state: GameState): GameState => {
     productProgress: clamp(Math.round(state.productProgress), 0, 100),
     marketFit: clamp(Math.round(state.marketFit), 0, 100),
     reputation: clamp(Math.round(state.reputation ?? 42), 0, 100),
+    competitionPressure,
+    mainCompetitorName:
+      state.mainCompetitorName ?? pickCompetitorName(industry, state.leagueSeed ?? state.runId ?? "startup-zero"),
+    competitionLevel: getCompetitionLevel(competitionPressure),
     fundingStage: Math.max(0, Math.round(state.fundingStage ?? 0)),
     burnRate: Math.max(0, Math.round(state.burnRate)),
     cash: Math.round(state.cash),
@@ -146,6 +168,42 @@ const normalizeState = (state: GameState): GameState => {
   };
 };
 
+const adjustCompetitionAfterAction = (state: GameState, action: ActionType) => {
+  let pressure = state.competitionPressure;
+  if (action === "Develop") pressure -= state.productProgress >= 55 ? 5 : 3;
+  if (action === "Marketing") pressure += state.competitionPressure >= 60 ? 2 : 1;
+  if (action === "Pivot") pressure -= state.marketFit < 40 ? 6 : 2;
+  if (action === "Fundraising") pressure += state.fundingStage >= 1 ? 2 : 0;
+  if (state.marketFit >= 65) pressure -= 2;
+  if (state.reputation >= 65) pressure -= 2;
+  pressure = clamp(Math.round(pressure), 0, 100);
+  return {
+    ...state,
+    competitionPressure: pressure,
+    competitionLevel: getCompetitionLevel(pressure),
+  };
+};
+
+const applyLeaguePressure = (state: GameState, action: ActionType): GameState => {
+  if (!state.isFounderLeague) {
+    return state;
+  }
+
+  const pressureFactor = 1 - state.competitionPressure / 450;
+  const fundraisingPenalty = action === "Fundraising" ? -0.1 : 0;
+  return {
+    ...state,
+    users: action === "Marketing" ? Math.round(state.users * pressureFactor) : state.users,
+    revenue: action === "Marketing" ? Math.round(state.revenue * (pressureFactor + 0.03)) : state.revenue,
+    cash: action === "Marketing" ? state.cash - Math.round(900 * (1 + state.competitionPressure / 100)) : state.cash,
+    burnRate: Math.round(state.burnRate * (action === "Marketing" ? 1.01 : 1)),
+    modifiers: {
+      ...state.modifiers,
+      fundraising: state.modifiers.fundraising + fundraisingPenalty,
+    },
+  };
+};
+
 const applyAction = (state: GameState, action: ActionType): GameState => {
   const phase = getPhase(state);
   const earlyDiscount = phase === "early" ? 0.62 : phase === "mid" ? 1 : 1.12;
@@ -159,13 +217,15 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
   const industry = industryConfig[state.industry];
   const fitFactor = clamp(0.72 + state.marketFit / 100, 0.72, 1.42);
 
+  const applyLeague = (next: GameState) => adjustCompetitionAfterAction(applyLeaguePressure(next, action), action);
+
   switch (action) {
     case "Develop": {
       const progressGain = Math.round((phase === "early" ? 15 : phase === "mid" ? 13 : 11) * developBonus * (state.teamMorale < 25 ? 0.85 : 1));
       const fitGain = Math.round((phase === "early" ? 5 : state.productProgress >= 65 ? 2 : 3) * productBonus);
       const cashCost = Math.round((phase === "early" ? 5200 : phase === "mid" ? 7200 : 9800) * (state.industry === "AI" ? 1.15 : 1) * (phase === "early" ? 0.82 : 1));
       const moraleLoss = Math.round((phase === "early" ? 2 : phase === "mid" ? 4 : 6) * moraleDrain);
-      return {
+      return applyLeague({
         ...state,
         productProgress: state.productProgress + progressGain,
         marketFit: state.marketFit + fitGain,
@@ -187,7 +247,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
             },
           },
         ),
-      };
+      });
     }
     case "Hire":
       {
@@ -198,7 +258,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
         const burnIncrease = Math.round((phase === "early" ? 3200 : phase === "mid" ? 5200 : 7800) + state.fundingStage * 450);
         const cashCost = Math.round((phase === "early" ? 2500 : phase === "mid" ? 4500 : 6500) * earlyDiscount);
         const moraleLoss = Math.round((moraleRisk ? (phase === "late" ? 10 : phase === "mid" ? 8 : 5) : phase === "late" ? 5 : phase === "mid" ? 3 : 2) * moraleDrain);
-        return {
+        return applyLeague({
           ...state,
           burnRate: state.burnRate + burnIncrease,
           productProgress: state.productProgress + progressGain,
@@ -223,7 +283,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
               },
             },
           ),
-        };
+        });
       }
     case "Marketing":
       {
@@ -245,7 +305,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
         );
         const burnIncrease = Math.round((phase === "early" ? 600 : phase === "mid" ? 1800 : 3600) * state.modifiers.burnRate);
         const cashCost = Math.round((phase === "early" ? 5500 : phase === "mid" ? 9000 : 12500) * earlyDiscount);
-        return {
+        return applyLeague({
           ...state,
           users: state.users + userGain,
           revenue: state.revenue + revenueGain,
@@ -268,7 +328,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
               },
             },
           ),
-        };
+        });
       }
     case "Fundraising": {
       const baseChance = phase === "early" ? 0.52 : phase === "mid" ? 0.44 : 0.38;
@@ -289,7 +349,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
       const nextStage = state.fundingStage + 1;
       const raiseAmount = Math.round((phase === "late" ? 90000 : phase === "mid" ? 65000 : 46000) + nextStage * 18000 + state.reputation * 280);
       return success
-        ? {
+        ? applyLeague({
             ...state,
             cash: state.cash + raiseAmount,
             burnRate: state.burnRate + (phase === "late" ? 4200 : phase === "mid" ? 2400 : 1200) + nextStage * 500,
@@ -310,8 +370,8 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
                 },
               },
             ),
-          }
-        : {
+          })
+        : applyLeague({
             ...state,
             teamMorale: state.teamMorale - Math.round((phase === "early" ? 6 : phase === "mid" ? 8 : 10) * moraleDrain),
             reputation: state.reputation - 4,
@@ -329,7 +389,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
                 },
               },
             ),
-          };
+          });
     }
     case "Pivot":
       {
@@ -337,7 +397,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
         const progressLoss = phase === "early" ? 5 : phase === "mid" ? 11 : 20;
         const userLoss = Math.min(state.users, phase === "early" ? 15 : phase === "mid" ? 50 : Math.max(80, Math.floor(state.users * 0.08)));
         const moraleLoss = Math.round(((phase === "late" ? 15 : phase === "mid" ? 10 : 7) - (state.marketFit < 30 ? 2 : 0)) * moraleDrain);
-        return {
+        return applyLeague({
           ...state,
           marketFit: state.marketFit + fitGain,
           productProgress: state.productProgress - progressLoss,
@@ -359,14 +419,14 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
               },
             },
           ),
-        };
+        });
       }
     case "Rest":
       {
         const moraleGain = state.trait === "Calm Operator" ? 22 : phase === "late" ? 16 : phase === "mid" ? 18 : 20;
         const cashCost = phase === "early" ? 1000 : phase === "mid" ? 1800 : 2600;
         const burnReduction = phase === "early" ? 700 : phase === "mid" ? 1000 : 1200;
-        return {
+        return applyLeague({
           ...state,
           teamMorale: state.teamMorale + moraleGain,
           productProgress: state.productProgress - (phase === "late" ? 6 : phase === "mid" ? 3 : 1),
@@ -382,7 +442,7 @@ const applyAction = (state: GameState, action: ActionType): GameState => {
               params: { morale: moraleGain, burn: burnReduction.toLocaleString() },
             },
           ),
-        };
+        });
       }
     default:
       return state;
@@ -471,6 +531,9 @@ const completeRun = (state: GameState, outcome: "won" | "lost", reason: string):
   let unlockedIndustries = state.meta.unlockedIndustries;
   let unlockedFounders = state.meta.unlockedFounders;
   let achievements = state.meta.achievements;
+  const shouldRecordNormalClear =
+    outcome === "won" && state.mode === "normal" && !state.hasRecordedClear;
+  const normalModeClears = state.meta.normalModeClears + (shouldRecordNormalClear ? 1 : 0);
   const unlockMessages: string[] = [];
 
   if (totalXp >= 80 && !unlockedIndustries.includes("Game")) {
@@ -519,12 +582,15 @@ const completeRun = (state: GameState, outcome: "won" | "lost", reason: string):
     status: outcome,
     deathReason: reason,
     metaAwarded: true,
+    hasRecordedClear: state.hasRecordedClear || shouldRecordNormalClear,
     logs: resultLog,
     meta: {
       ...state.meta,
       xp: totalXp,
       runs: state.meta.runs + 1,
       bestRevenue: Math.max(state.meta.bestRevenue, state.revenue),
+      normalModeClears,
+      founderLeagueUnlocked: state.meta.founderLeagueUnlocked || normalModeClears >= 2,
       unlockedIndustries,
       unlockedFounders,
       achievements,
@@ -533,6 +599,34 @@ const completeRun = (state: GameState, outcome: "won" | "lost", reason: string):
 };
 
 const resolveStatus = (state: GameState): GameState => {
+  if (state.isFounderLeague) {
+    if (state.cash <= 0) {
+      return completeRun(
+        { ...state, ending: "Bankruptcy", leagueEndedAt: new Date().toISOString() },
+        "lost",
+        "i18n:league.result.bankrupt",
+      );
+    }
+
+    if (state.teamMorale <= 0) {
+      return completeRun(
+        { ...state, ending: "Team Collapse", leagueEndedAt: new Date().toISOString() },
+        "lost",
+        "i18n:league.result.teamCollapse",
+      );
+    }
+
+    if (state.month > state.maxMonths) {
+      return completeRun(
+        { ...state, ending: "Founder League Complete", leagueEndedAt: new Date().toISOString() },
+        "won",
+        "i18n:league.result.completed",
+      );
+    }
+
+    return state;
+  }
+
   if (state.ending === "Unicorn") {
     return completeRun(state, "won", "i18n:entities.deathReasons.unicornIpo");
   }
@@ -595,6 +689,10 @@ const createMonthlyReport = (
   revenueDelta: after.revenue - before.revenue,
   usersDelta: after.users - before.users,
   moraleDelta: after.teamMorale - before.teamMorale,
+  productProgressDelta: after.productProgress - before.productProgress,
+  marketFitDelta: after.marketFit - before.marketFit,
+  reputationDelta: after.reputation - before.reputation,
+  burnRateDelta: after.burnRate - before.burnRate,
   runway: after.runway,
   summary: `${action} completed. ${
     eventName ? eventName : "reports.noEventText"
@@ -605,6 +703,18 @@ const createMonthlyReport = (
     event: eventName ? `i18n:${eventName}` : "",
     cash: (after.cash - before.cash).toLocaleString(),
   },
+});
+
+const createMonthlyDelta = (before: GameState, after: GameState) => ({
+  cash: after.cash - before.cash,
+  revenue: after.revenue - before.revenue,
+  users: after.users - before.users,
+  teamMorale: after.teamMorale - before.teamMorale,
+  productProgress: after.productProgress - before.productProgress,
+  marketFit: after.marketFit - before.marketFit,
+  reputation: after.reputation - before.reputation,
+  burnRate: after.burnRate - before.burnRate,
+  runway: after.runway - before.runway,
 });
 
 export const playTurn = (state: GameState, action: ActionType): GameState => {
@@ -641,10 +751,11 @@ export const playTurn = (state: GameState, action: ActionType): GameState => {
   const withReport = {
     ...resolved,
     monthlyReports: [report, ...resolved.monthlyReports].slice(0, 12),
-    monthlyHistory: [createSnapshot(resolved), ...resolved.monthlyHistory].slice(0, 24),
-    actionHistory: [actionHistoryEntry, ...resolved.actionHistory].slice(0, 40),
+    lastMonthDelta: createMonthlyDelta(before, resolved),
+    monthlyHistory: [createSnapshot(resolved), ...resolved.monthlyHistory].slice(0, 48),
+    actionHistory: [actionHistoryEntry, ...resolved.actionHistory].slice(0, 60),
     eventHistory: eventHistoryEntry
-      ? [eventHistoryEntry, ...resolved.eventHistory].slice(0, 40)
+      ? [eventHistoryEntry, ...resolved.eventHistory].slice(0, 60)
       : resolved.eventHistory,
     rewardAdWatched: false,
   };

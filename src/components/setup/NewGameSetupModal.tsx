@@ -1,50 +1,70 @@
 import { useState } from "react";
-import type { FounderType, IndustryType, MetaProgression, ScenarioType } from "../../gameState";
+import type { FounderType, GameMode, IndustryType, MetaProgression, ScenarioType } from "../../gameState";
 import { useI18n } from "../../i18n";
+import CompanyInfoStep from "./CompanyInfoStep";
 import FounderSelectStep from "./FounderSelectStep";
 import IndustrySelectStep from "./IndustrySelectStep";
+import ModeSelectStep from "./ModeSelectStep";
 import ScenarioSelectStep from "./ScenarioSelectStep";
 import SetupConfirmStep from "./SetupConfirmStep";
 import SetupStepIndicator from "./SetupStepIndicator";
 
-type SetupStep = "scenario" | "industry" | "founder" | "confirm";
+type SetupStep = "mode" | "scenario" | "industry" | "founder" | "identity" | "confirm";
 
 type NewGameSetupModalProps = {
   meta: MetaProgression;
   initialScenario: ScenarioType;
   initialIndustry: IndustryType;
   initialFounder: FounderType;
+  initialMode: GameMode;
+  defaultFounderName: string;
+  defaultCompanyName: string;
   canCancel: boolean;
   onCancel: () => void;
   onStart: (setup: {
+    mode: GameMode;
     scenario: ScenarioType;
     industry: IndustryType;
     founder: FounderType;
+    founderName: string;
+    companyName: string;
   }) => void;
 };
 
-const steps: SetupStep[] = ["scenario", "industry", "founder", "confirm"];
+const steps: SetupStep[] = ["mode", "scenario", "industry", "founder", "identity", "confirm"];
 
 export default function NewGameSetupModal({
   meta,
   initialScenario,
   initialIndustry,
   initialFounder,
+  initialMode,
+  defaultFounderName,
+  defaultCompanyName,
   canCancel,
   onCancel,
   onStart,
 }: NewGameSetupModalProps) {
   const { t } = useI18n();
-  const [currentStep, setCurrentStep] = useState<SetupStep>("scenario");
+  const founderLeagueUnlocked =
+    meta.founderLeagueUnlocked || (meta.normalModeClears ?? 0) >= 2;
+  const [currentStep, setCurrentStep] = useState<SetupStep>("mode");
+  const [selectedMode, setSelectedMode] = useState<GameMode | null>(
+    initialMode === "founderLeague" && !founderLeagueUnlocked ? "normal" : initialMode,
+  );
   const [selectedScenario, setSelectedScenario] = useState<ScenarioType | null>(initialScenario);
   const [selectedIndustry, setSelectedIndustry] = useState<IndustryType | null>(initialIndustry);
   const [selectedFounder, setSelectedFounder] = useState<FounderType | null>(initialFounder);
+  const [founderName, setFounderName] = useState(defaultFounderName);
+  const [companyName, setCompanyName] = useState(defaultCompanyName);
 
   const currentIndex = steps.indexOf(currentStep);
   const canGoNext =
+    (currentStep === "mode" && selectedMode) ||
     (currentStep === "scenario" && selectedScenario) ||
     (currentStep === "industry" && selectedIndustry) ||
     (currentStep === "founder" && selectedFounder) ||
+    (currentStep === "identity" && founderName.trim() && companyName.trim()) ||
     currentStep === "confirm";
 
   const goNext = () => {
@@ -57,11 +77,14 @@ export default function NewGameSetupModal({
   };
 
   const startGame = () => {
-    if (!selectedScenario || !selectedIndustry || !selectedFounder) return;
+    if (!selectedMode || !selectedScenario || !selectedIndustry || !selectedFounder) return;
     onStart({
+      mode: selectedMode,
       scenario: selectedScenario,
       industry: selectedIndustry,
       founder: selectedFounder,
+      founderName: founderName.trim() || defaultFounderName,
+      companyName: companyName.trim() || defaultCompanyName,
     });
   };
 
@@ -93,6 +116,9 @@ export default function NewGameSetupModal({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {currentStep === "mode" && (
+            <ModeSelectStep meta={meta} selectedMode={selectedMode} onSelect={setSelectedMode} />
+          )}
           {currentStep === "scenario" && (
             <ScenarioSelectStep selectedScenario={selectedScenario} onSelect={setSelectedScenario} />
           )}
@@ -110,11 +136,22 @@ export default function NewGameSetupModal({
               onSelect={setSelectedFounder}
             />
           )}
-          {currentStep === "confirm" && selectedScenario && selectedIndustry && selectedFounder && (
+          {currentStep === "identity" && (
+            <CompanyInfoStep
+              founderName={founderName}
+              companyName={companyName}
+              onFounderNameChange={setFounderName}
+              onCompanyNameChange={setCompanyName}
+            />
+          )}
+          {currentStep === "confirm" && selectedMode && selectedScenario && selectedIndustry && selectedFounder && (
             <SetupConfirmStep
+              selectedMode={selectedMode}
               selectedScenario={selectedScenario}
               selectedIndustry={selectedIndustry}
               selectedFounder={selectedFounder}
+              founderName={founderName.trim() || defaultFounderName}
+              companyName={companyName.trim() || defaultCompanyName}
               onEdit={setCurrentStep}
             />
           )}
@@ -134,7 +171,7 @@ export default function NewGameSetupModal({
               <>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep("scenario")}
+                  onClick={() => setCurrentStep("mode")}
                   className="min-h-11 rounded-md border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-bold text-teal-800"
                 >
                   {t("setup.edit")}

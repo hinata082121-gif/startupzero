@@ -1,12 +1,15 @@
-import type { FounderType, IndustryType, ScenarioType } from "../../gameState";
+import type { FounderType, GameMode, IndustryType, ScenarioType } from "../../gameState";
 import { founderConfig, industryConfig, scenarioConfig } from "../../gameState";
 import { useI18n } from "../../i18n";
 
 type SetupConfirmStepProps = {
+  selectedMode: GameMode;
   selectedScenario: ScenarioType;
   selectedIndustry: IndustryType;
   selectedFounder: FounderType;
-  onEdit: (step: "scenario" | "industry" | "founder") => void;
+  founderName: string;
+  companyName: string;
+  onEdit: (step: "mode" | "scenario" | "industry" | "founder" | "identity") => void;
 };
 
 const difficultyRank = {
@@ -30,9 +33,12 @@ export const getOverallDifficulty = (
 };
 
 export default function SetupConfirmStep({
+  selectedMode,
   selectedScenario,
   selectedIndustry,
   selectedFounder,
+  founderName,
+  companyName,
   onEdit,
 }: SetupConfirmStepProps) {
   const { t } = useI18n();
@@ -50,6 +56,11 @@ export default function SetupConfirmStep({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryCard
+          label={t("setup.selectedMode")}
+          value={t(`modes.${selectedMode}.title`)}
+          onEdit={() => onEdit("mode")}
+        />
+        <SummaryCard
           label={t("setup.selectedScenario")}
           value={t(`entities.scenarios.${selectedScenario}.title`)}
           onEdit={() => onEdit("scenario")}
@@ -63,6 +74,16 @@ export default function SetupConfirmStep({
           label={t("setup.selectedFounder")}
           value={t(`entities.founders.${selectedFounder}.title`)}
           onEdit={() => onEdit("founder")}
+        />
+        <SummaryCard
+          label={t("setup.companyName")}
+          value={companyName}
+          onEdit={() => onEdit("identity")}
+        />
+        <SummaryCard
+          label={t("setup.founderName")}
+          value={founderName}
+          onEdit={() => onEdit("identity")}
         />
       </div>
 

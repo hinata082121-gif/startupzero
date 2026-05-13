@@ -1,12 +1,12 @@
 import { useI18n } from "../../i18n";
 
-type SetupStep = "scenario" | "industry" | "founder" | "confirm";
+type SetupStep = "mode" | "scenario" | "industry" | "founder" | "identity" | "confirm";
 
 type SetupStepIndicatorProps = {
   currentStep: SetupStep;
 };
 
-const steps: SetupStep[] = ["scenario", "industry", "founder", "confirm"];
+const steps: SetupStep[] = ["mode", "scenario", "industry", "founder", "identity", "confirm"];
 
 export default function SetupStepIndicator({ currentStep }: SetupStepIndicatorProps) {
   const { t } = useI18n();
@@ -21,7 +21,7 @@ export default function SetupStepIndicator({ currentStep }: SetupStepIndicatorPr
           step: t(`setup.step.${currentStep}`),
         })}
       </p>
-      <div className="mt-3 grid grid-cols-4 gap-2">
+      <div className="mt-3 grid grid-cols-6 gap-2">
         {steps.map((step, index) => (
           <div
             key={step}

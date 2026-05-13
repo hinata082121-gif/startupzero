@@ -6,6 +6,7 @@ export type ActiveView =
   | "report"
   | "analysis"
   | "mentor"
+  | "ranking"
   | "log"
   | "help"
   | "privacy"
@@ -25,6 +26,7 @@ const items: Array<{ id: ActiveView; mark: string }> = [
   { id: "report", mark: "R" },
   { id: "analysis", mark: "N" },
   { id: "mentor", mark: "M" },
+  { id: "ranking", mark: "#" },
   { id: "log", mark: "L" },
   { id: "help", mark: "?" },
   { id: "settings", mark: "S" },
@@ -32,6 +34,27 @@ const items: Array<{ id: ActiveView; mark: string }> = [
 
 export default function Navigation({ activeView, onChange }: NavigationProps) {
   const { t } = useI18n();
+  const isCraftNovaLayout = __CRAFTNOVA_BUILD__;
+
+  if (isCraftNovaLayout) {
+    return (
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex gap-1 overflow-x-auto border-t border-slate-200 bg-white/95 px-2 py-1.5 shadow-lg backdrop-blur">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onChange(item.id)}
+            className={`flex min-h-11 min-w-16 flex-col items-center justify-center rounded-md px-2 text-[10px] font-bold transition ${
+              activeView === item.id ? "bg-teal-600 text-white" : "text-slate-600"
+            }`}
+          >
+            <span className="text-xs leading-none">{item.mark}</span>
+            <span className="mt-0.5 max-w-full truncate">{t(`navigation.${item.id}`)}</span>
+          </button>
+        ))}
+      </nav>
+    );
+  }
 
   return (
     <>
